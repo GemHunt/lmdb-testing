@@ -1,10 +1,4 @@
-#!/usr/bin/env python2
-# Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
-"""
-Functions for creating temporary LMDBs
-Used in test_views
-from https://github.com/NVIDIA/DIGITS/examples/siamese/create_db.py
-"""
+#Derived from https://github.com/NVIDIA/DIGITS/examples/siamese/create_db.py
 
 import argparse
 from collections import defaultdict
@@ -13,10 +7,11 @@ import random
 import re
 import sys
 import time
+import glob
+import cv2
+
 sys.path.append('/home/pkrush/caffe/python')
-sys.path.append('/home/pkrush/digits/digits/config')
-
-
+sys.path.append('/home/pkrush/digits')
 
 # Find the best implementation available
 try:
@@ -38,16 +33,10 @@ from digits import utils
 
 # Import digits.config first to set the path to Caffe
 import caffe.io
-import caffe_pb2
-
-IMAGE_SIZE  = 10
-TRAIN_IMAGE_COUNT = 1000
-VAL_IMAGE_COUNT = 1000
-TEST_IMAGE_COUNT = 10
-DB_BATCH_SIZE = 100
+from caffe.proto import caffe_pb2
 
 
-def create_lmdbs(folder, file_list, image_count=None, db_batch_size=None):
+def create_lmdbs():
     """
     Creates LMDBs for generic inference
     Returns the filename for a test image
@@ -61,39 +50,11 @@ def create_lmdbs(folder, file_list, image_count=None, db_batch_size=None):
         test.png
     """
 
-    if image_count is None:
-        train_image_count = TRAIN_IMAGE_COUNT
-    else:
-        train_image_count = image_count
-    val_image_count = VAL_IMAGE_COUNT
+    max_images = 100
+    crop_size = 280
+    folder = 'lmdb-test'
 
-    if db_batch_size is None:
-        db_batch_size = DB_BATCH_SIZE
-
-    # read file list
-    images = []
-    f = open(file_list)
-    for line in f.readlines():
-        line = line.strip()
-        if not line:
-            continue
-
-        path = None
-        # might contain a numerical label at the end
-        match = re.match(r'(.*\S)\s+(\d+)$', line)
-        if match:
-            path = match.group(1)
-            ground_truth = int(match.group(2))
-            images.append([path,ground_truth])
-
-    print "Found %d image paths in image list" % len(images)
-
-    for phase, image_count in [
-            ('train', train_image_count),
-            ('val', val_image_count)]:
-
-        print "Will create %d pairs of %s images" % (image_count, phase)
-
+    for phase in ('train','val'):
         # create DBs
         image_db = lmdb.open(os.path.join(folder, '%s_images' % phase),
                 map_async=True,
@@ -103,80 +64,64 @@ def create_lmdbs(folder, file_list, image_count=None, db_batch_size=None):
                 max_dbs=0)
 
         # add up all images to later create mean image
-        image_sum = None
-        shape = None
-
-        # save test images (one for each label)
-        testImagesSameClass = []
-        testImagesDifferentClass = []
+        image_sum = np.zeros((28,28,1), 'float64')
 
         # arrays for image and label batch writing
         image_batch = []
         label_batch = []
+        id = -1
 
-        for i in xrange(image_count):
-            # pick up random indices from image list
-            index1 = random.randint(0, len(images)-1)
-            index2 = random.randint(0, len(images)-1)
-            # label=1 if images are from the same class otherwise label=0
-            label = 1 if int(images[index1][1]) == int(images[index2][1]) else 0
-            # load images from files
-            image1 = np.array(utils.image.load_image(images[index1][0]))
-            image2 = np.array(utils.image.load_image(images[index2][0]))
-            if not shape:
-               # initialize image sum for mean image
-               shape = image1.shape
-               image_sum = np.zeros((3,shape[0],shape[1]), 'float64')
-            assert(image1.shape == shape and image2.shape == shape)
+        for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
+            id += 1
+            if id > max_images - 1:
+                continue
+            if ((id+4) % 4 == 0) and phase == 'train' :
+                print 'not train'
+                continue
+            if ((id+4) % 4 != 0) and phase == 'val':
+                print 'not val'
+                continue
 
-            # create BGR image: blue channel will contain first image,
-            # green channel will contain second image
-            image_pair = np.zeros(image_sum.shape)
-            image_pair[0] = image1
-            image_pair[1] = image2
+            print id
+            crop = cv2.imread(filename)
+            if crop is None:
+                continue
+            crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
 
-            image_sum += image_pair
+            for x in range(0, 10):
+                for y in range(0, 10):
+                    crop_crop = crop[y * 28:(y + 1) * 28, x * 28:(x + 1) * 28]
+                    crop_crop = np.reshape(crop_crop, (28,28,1))
+                    image_sum += crop_crop
+                    label = x * 10 + y
+                    str_id = '{:08}'.format(id * 100 + x * 10 + y)
 
-            # save test images on first pass
-            if label>0 and len(testImagesSameClass)<TEST_IMAGE_COUNT:
-                testImagesSameClass.append(image_pair)
-            if label==0 and len(testImagesDifferentClass)<TEST_IMAGE_COUNT:
-                testImagesDifferentClass.append(image_pair)
+                    # encode into Datum object
+                    datum = caffe.io.array_to_datum(crop_crop, label)
+                    image_batch.append([str_id, datum])
 
-            # encode into Datum object
-            image = image_pair.astype('uint8')
-            datum = caffe.io.array_to_datum(image, -1)
-            image_batch.append([str(i), datum])
+                    # create label Datum
+                    label_datum = caffe_pb2.Datum()
+                    label_datum.channels, label_datum.height, label_datum.width = 1, 1, 1
+                    label_datum.float_data.extend(np.array([label]).flat)
+                    label_batch.append([str_id, label_datum])
 
-            # create label Datum
-            label_datum = caffe_pb2.Datum()
-            label_datum.channels, label_datum.height, label_datum.width = 1, 1, 1
-            label_datum.float_data.extend(np.array([label]).flat)
-            label_batch.append([str(i), label_datum])
-
-            if (i % db_batch_size == (db_batch_size - 1)) or (i == image_count - 1):
-                _write_batch_to_lmdb(image_db, image_batch)
-                _write_batch_to_lmdb(label_db, label_batch)
-                image_batch = []
-                label_batch = []
-
-            if i % (image_count/20) == 0:
-                print "%d/%d" % (i, image_count)
 
         # close databases
+        _write_batch_to_lmdb(image_db, image_batch)
+        _write_batch_to_lmdb(label_db, label_batch)
+        image_batch = []
+        label_batch = []
+
         image_db.close()
         label_db.close()
 
         # save mean
-        mean_image = (image_sum / image_count).astype('uint8')
+        mean_image = (image_sum / id*100).astype('uint8')
         _save_mean(mean_image, os.path.join(folder, '%s_mean.binaryproto' % phase))
-        _save_mean(mean_image, os.path.join(folder, '%s_mean.png' % phase))
-
-        # create test images
-        for idx, image in enumerate(testImagesSameClass):
-            _save_image(image, os.path.join(folder, '%s_test_same_class_%d.png' % (phase,idx)))
-        for idx, image in enumerate(testImagesDifferentClass):
-            _save_image(image, os.path.join(folder, '%s_test_different_class_%d.png' % (phase,idx)))
+        #mean_image = np.reshape(mean_image, (28, 28))
+        #_save_mean(mean_image, os.path.join(folder, '%s_mean.png' % phase))
 
     return
 
@@ -206,7 +151,7 @@ def _write_batch_to_lmdb(db, batch):
 def _save_image(image, filename):
     # converting from BGR to RGB
     image = image[[2,1,0],...] # channel swap
-    # convert to (height, width, channels)
+    #convert to (height, width, channels)
     image = image.astype('uint8').transpose((1,2,0))
     image = PIL.Image.fromarray(image)
     image.save(filename)
@@ -235,39 +180,9 @@ def _save_mean(mean, filename):
         raise ValueError('unrecognized file extension')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Create-LMDB tool - DIGITS')
-
-    ### Positional arguments
-
-    parser.add_argument('folder',
-            help='Where to save the images'
-            )
-
-    parser.add_argument('file_list',
-            help='File list'
-            )
-
-    ### Optional arguments
-    parser.add_argument('-c', '--image_count',
-            type=int,
-            help='How many images')
-
-    args = vars(parser.parse_args())
-
-    if os.path.exists(args['folder']):
-        print 'ERROR: Folder already exists'
-        sys.exit(1)
-    else:
-        os.makedirs(args['folder'])
-
-    print 'Creating images at "%s" ...' % args['folder']
-
     start_time = time.time()
 
-    create_lmdbs(args['folder'],
-		 args['file_list'],
-                 image_count=args['image_count'],
-            )
+    create_lmdbs()
 
     print 'Done after %s seconds' % (time.time() - start_time,)
 
