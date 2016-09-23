@@ -97,6 +97,8 @@ def create_lmdbs():
                     label = x * 10 + y
                     str_id = '{:08}'.format(id * 100 + x * 10 + y)
 
+
+
                     # encode into Datum object
                     datum = caffe.io.array_to_datum(crop_crop, label)
                     image_batch.append([str_id, datum])

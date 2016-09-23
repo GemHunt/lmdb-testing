@@ -9,12 +9,12 @@ import cv2
 
 filename = 'lmdb-test/train_images'
 #png: filename = '/home/pkrush/digits/digits/jobs/20160923-121704-e4cc/train_db'
-#No encoding:  filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
+#No encoding:
+#filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
 
 env = lmdb.open(filename, readonly=True)
 with env.begin() as txn:
     raw_datum = txn.get(b'00000000')
-
 
 datum = caffe.proto.caffe_pb2.Datum()
 
