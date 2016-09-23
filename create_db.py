@@ -64,7 +64,7 @@ def create_lmdbs():
                 max_dbs=0)
 
         # add up all images to later create mean image
-        image_sum = np.zeros((28,28,1), 'float64')
+        image_sum = np.zeros((1,28,28), 'float64')
 
         # arrays for image and label batch writing
         image_batch = []
@@ -92,7 +92,7 @@ def create_lmdbs():
             for x in range(0, 10):
                 for y in range(0, 10):
                     crop_crop = crop[y * 28:(y + 1) * 28, x * 28:(x + 1) * 28]
-                    crop_crop = np.reshape(crop_crop, (28,28,1))
+                    crop_crop = np.reshape(crop_crop, (1,28,28))
                     image_sum += crop_crop
                     label = x * 10 + y
                     str_id = '{:08}'.format(id * 100 + x * 10 + y)
