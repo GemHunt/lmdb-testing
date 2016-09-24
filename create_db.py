@@ -50,7 +50,7 @@ def create_lmdbs():
         test.png
     """
 
-    max_images = 10000
+    max_images = 100
     crop_size = 280
     folder = 'lmdb-test'
 
@@ -91,18 +91,17 @@ def create_lmdbs():
             #os.makedirs('lmdb-files')
             #for x in range(0, 10):
                 #for y in range(0, 10):
-                    #os.makedirs('lmdb-files/' + str(x * 10 + y))
+                    #os.makedirs('lmdb-files/' + str(x * 10 + y + 100))
 
             for x in range(0, 10):
                 for y in range(0, 10):
-                    crop_crop = crop[y * 28:(y + 1) * 28, x * 28:(x + 1) * 28]
-                    #cv2.imwrite('lmdb-files/' + str(x * 10 + y) + '/' + imageid + '.png', crop_crop)
+                    crop_crop = crop[x * 28:(x + 1) * 28, y * 28:(y + 1) * 28]
+                    classid = x * 10 + y + 100
+                    cv2.imwrite('lmdb-files/' + str(classid) + '/' + imageid + '.png', crop_crop)
                     crop_crop = np.reshape(crop_crop, (1,28,28))
                     image_sum += crop_crop
                     label = x * 10 + y
-                    str_id = '{:08}'.format(id * 100 + x * 10 + y)
-
-
+                    str_id = '{:08}'.format(id * 100 + classid)
 
                     # encode into Datum object
                     datum = caffe.io.array_to_datum(crop_crop, label)
