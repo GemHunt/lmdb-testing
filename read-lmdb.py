@@ -1,4 +1,5 @@
 #from http://deepdish.io/2015/04/28/creating-lmdb-in-python/
+#Some example code to read images in LMDB files.
 
 import numpy as np
 import lmdb

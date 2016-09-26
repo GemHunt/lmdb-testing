@@ -37,26 +37,15 @@ from caffe.proto import caffe_pb2
 
 
 def create_lmdbs():
-    """
-    Creates LMDBs for generic inference
-    Returns the filename for a test image
+    #Creates LMDBs for basic image classification
 
-    Creates these files in "folder":
-        train_images/
-        train_labels/
-        val_images/
-        val_labels/
-        mean.binaryproto
-        test.png
-    """
-
-    max_images = 100
+    max_images = 10000
     crop_size = 280
     folder = 'lmdb-test'
 
     for phase in ('train','val'):
         # create DBs
-        image_db = lmdb.open(os.path.join(folder, '%s_images' % phase),
+        image_db = lmdb.open(os.path.join(folder, '%s_db' % phase),
                 map_async=True,
                 max_dbs=0)
         #label_db = lmdb.open(os.path.join(folder, '%s_labels' % phase),
@@ -97,7 +86,7 @@ def create_lmdbs():
                 for y in range(0, 10):
                     crop_crop = crop[x * 28:(x + 1) * 28, y * 28:(y + 1) * 28]
                     classid = x * 10 + y + 100
-                    cv2.imwrite('lmdb-files/' + str(classid) + '/' + imageid + '.png', crop_crop)
+                    #cv2.imwrite('lmdb-files/' + str(classid) + '/' + imageid + '.png', crop_crop)
                     crop_crop = np.reshape(crop_crop, (1,28,28))
                     image_sum += crop_crop
                     label = x * 10 + y
@@ -123,12 +112,10 @@ def create_lmdbs():
         image_db.close()
         #label_db.close()
 
-        # save mean
-        mean_image = (image_sum / id*100).astype('uint8')
-        _save_mean(mean_image, os.path.join(folder, '%s_mean.binaryproto' % phase))
-        #mean_image = np.reshape(mean_image, (28, 28))
-        #_save_mean(mean_image, os.path.join(folder, '%s_mean.png' % phase))
-        print id
+        if phase == 'train':
+            # save mean
+            mean_image = (image_sum / id*100).astype('uint8')
+            _save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
 
     return
 
