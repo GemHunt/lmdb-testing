@@ -9,6 +9,7 @@ import sys
 import time
 import glob
 import cv2
+import math
 from PIL import Image
 from random import randint
 
@@ -45,27 +46,43 @@ def rotate(img, angle):
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img;
 
+def rotate_point(angle, center_x,center_y,point_x,point_y):
+    rotated = (0,0)
+    rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
+    rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y;
+    return rotated_x,rotated_y
+
+
+def rotate_matrix(angle, center_x,center_y,mat):
+    rotated = mat.copy()
+    #OMG I need to learny my matrix math in Python!
+    for num in range(0,4):
+        rotated_x,rotated_y = rotate_point(math.radians(angle),center_x,center_y,mat[num,0],mat[num,1])
+        rotated[num,0] = rotated_x
+        rotated[num, 1] = rotated_y
+    return rotated
+
 
 def create_lmdbs():
     #Creates LMDBs for basic image classification
 
-    max_images = 10000
+    max_images = 100
     crop_size = 60
     folder = 'lmdb-test'
 
     lmdb_dir = '/home/pkrush/lmdb-files'
-    if not os.makedirs(lmdb_dir):
+    if not os.path.exists(lmdb_dir):
         os.makedirs(lmdb_dir)
     for x in range(0, 360):
         lmdb_dir_class = lmdb_dir + '/' + str(1000 + x)
-        if not os.makedirs(lmdb_dir_class):
+        if not os.path.exists(lmdb_dir_class):
             os.makedirs(lmdb_dir_class)
 
     for phase in ('train','val'):
         # create DBs
-        image_db = lmdb.open(os.path.join(folder, '%s_db' % phase),
-                map_async=True,
-                max_dbs=0)
+        #image_db = lmdb.open(os.path.join(folder, '%s_db' % phase),
+                #map_async=True,
+                #max_dbs=0)
         #label_db = lmdb.open(os.path.join(folder, '%s_labels' % phase),
                 #map_async=True,
                 #max_dbs=0)
@@ -82,13 +99,14 @@ def create_lmdbs():
             imageid = filename[-9:]
             imageid = imageid[:5]
             id += 1
-            print id
             if id > max_images - 1:
                 continue
             if ((id+4) % 4 == 0) and phase == 'train' :
                 continue
             if ((id+4) % 4 != 0) and phase == 'val':
                 continue
+
+            print id
 
             crop = cv2.imread(filename)
             if crop is None:
@@ -98,20 +116,23 @@ def create_lmdbs():
 
             crops = [None] * 360
 
+            #cv2.imshow("crop",crop)
+
+
             #OK, I was lasy here, I really need to remap the crop, not rotate the whole image!
             for angle in range(0,360):
-                rotated = rotate(crop.copy(),angle)
-                pts1 = np.float32([[440, 295], [580, 290], [440, 305], [580, 310]])
+                #rotated = rotate(crop.copy(),angle)
+                pts1 = np.float32([[440, 295], [595, 290], [440, 305], [595, 310]])
+                rotated_mat = rotate_matrix(angle, 300, 300, pts1)
+
                 pts2 = np.float32([[0, 0], [28, 0], [0, 14], [28, 14]])
-                M = cv2.getPerspectiveTransform(pts1, pts2)
-                dst = cv2.warpPerspective(rotated, M, (28, 14))
+                M = cv2.getPerspectiveTransform(rotated_mat, pts2)
+                dst = cv2.warpPerspective(crop, M, (28, 14))
 
                 crops[angle] = dst
-                # cv2.imshow("warp",rotated)
-                # cv2.imshow("dst",dst)
+                #cv2.imshow("dst",dst)
                 #if cv2.waitKey(0) & 0xFF == ord('q'):
                     #continue
-
 
             for count1 in range(0,1000):
                 top = randint(0, 359)
@@ -123,7 +144,7 @@ def create_lmdbs():
                 combo[0:14,0:28] = crops[top]
                 combo[14:28,0:28] = crops[bottom]
 
-                cv2.imwrite('lmdb-files/' + str(1000 + top) + '/' + imageid + str(count1 ) + '.png', combo)
+                cv2.imwrite(lmdb_dir + '/' + str(1000 + top) + '/' + imageid + str(count1 ) + '.png', combo)
 
 
                 #crop_crop = np.reshape(crop_crop, (1,crop_size,crop_size))
@@ -135,20 +156,19 @@ def create_lmdbs():
                 #datum = caffe.io.array_to_datum(crop_crop, label)
                 #image_batch.append([str_id, datum])
 
-
         # close databases
-        _write_batch_to_lmdb(image_db, image_batch)
+        #_write_batch_to_lmdb(image_db, image_batch)
         #_write_batch_to_lmdb(label_db, label_batch)
-        image_batch = []
+        #image_batch = []
         #label_batch = []
 
-        image_db.close()
+        #image_db.close()
         #label_db.close()
 
-        if phase == 'train':
+        #if phase == 'train':
             # save mean
-            mean_image = (image_sum / id*100).astype('uint8')
-            _save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
+            #mean_image = (image_sum / id*100).astype('uint8')
+            #_save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
 
     return
 
