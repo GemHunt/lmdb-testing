@@ -62,11 +62,52 @@ def rotate_matrix(angle, center_x,center_y,mat):
         rotated[num, 1] = rotated_y
     return rotated
 
+def get_angled_crops(crop, crop_size):
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    crop = cv2.resize(crop, (crop_size , crop_size), interpolation=cv2.INTER_AREA)
+
+    crops = [None] * 360
+
+    for angle in range(0, 360):
+        # rotated = rotate(crop.copy(),angle)
+        pts1 = np.float32([[440, 295], [595, 290], [440, 305], [595, 310]])
+        rotated_mat = rotate_matrix(angle, 300, 300, pts1)
+
+        pts2 = np.float32([[0, 0], [28, 0], [0, 14], [28, 14]])
+        M = cv2.getPerspectiveTransform(rotated_mat, pts2)
+        dst = cv2.warpPerspective(crop, M, (28, 14))
+
+        crops[angle] = dst
+
+    return crops
+
+
+def infer_two_crops():
+    crop1 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30057.png')
+    crop2 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30057.png')
+    crops1 = get_angled_crops(crop1, 600)
+    crops2 = get_angled_crops(crop2, 600)
+    for count1 in range(0, 100):
+        top = randint(0, 359)
+        bottom = top + randint(0, 359)
+        if bottom > 359:
+            bottom = bottom - 360
+
+        combo = np.zeros((28, 28))
+        combo[0:14, 0:28] = crops1[top]
+        combo[14:28, 0:28] = crops2[bottom]
+        angle = math.abs(top-bottom)
+        
+
+
+
+
+    return
 
 def create_lmdbs():
     #Creates LMDBs for basic image classification
 
-    max_images = 100
+    max_images = 10000
     crop_size = 60
     folder = 'lmdb-test'
 
@@ -111,28 +152,8 @@ def create_lmdbs():
             crop = cv2.imread(filename)
             if crop is None:
                 continue
-            crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-            crop = cv2.resize(crop, (crop_size * 10, crop_size * 10), interpolation=cv2.INTER_AREA)
 
-            crops = [None] * 360
-
-            #cv2.imshow("crop",crop)
-
-
-            #OK, I was lasy here, I really need to remap the crop, not rotate the whole image!
-            for angle in range(0,360):
-                #rotated = rotate(crop.copy(),angle)
-                pts1 = np.float32([[440, 295], [595, 290], [440, 305], [595, 310]])
-                rotated_mat = rotate_matrix(angle, 300, 300, pts1)
-
-                pts2 = np.float32([[0, 0], [28, 0], [0, 14], [28, 14]])
-                M = cv2.getPerspectiveTransform(rotated_mat, pts2)
-                dst = cv2.warpPerspective(crop, M, (28, 14))
-
-                crops[angle] = dst
-                #cv2.imshow("dst",dst)
-                #if cv2.waitKey(0) & 0xFF == ord('q'):
-                    #continue
+            crops = get_angled_crops(crop, crop_size * 10)
 
             for count1 in range(0,1000):
                 top = randint(0, 359)
