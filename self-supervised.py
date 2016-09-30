@@ -92,11 +92,6 @@ def infer_two_crops():
     total_max_value = 0
     total_hits = 0
     for angle in range(0, 360):
-        #top = randint(0, 359)
-        #bottom = top + randint(0, 359)
-        #if bottom > 359:
-            #bottom = bottom - 360
-
         combo = np.zeros((28, 28))
         combo[0:14, 0:28] = crops1[angle]
         combo[14:28, 0:28] = crops2[angle]
@@ -112,93 +107,98 @@ def infer_two_crops():
     return
 
 def create_lmdbs():
-    #Creates LMDBs for basic image classification
-
-    infer_two_crops()
-
     max_images = 10000
     crop_size = 60
-    folder = 'lmdb-test'
-
     lmdb_dir = '/home/pkrush/lmdb-files'
     if not os.path.exists(lmdb_dir):
         os.makedirs(lmdb_dir)
+    img_dir = '/home/pkrush/img-files'
+    if not os.path.exists(img_dir):
+        os.makedirs(img_dir)
     for x in range(0, 360):
-        lmdb_dir_class = lmdb_dir + '/' + str(1000 + x)
-        if not os.path.exists(lmdb_dir_class):
-            os.makedirs(lmdb_dir_class)
+        img_dir_class = img_dir + '/' + str(1000 + x)
+        if not os.path.exists(img_dir_class):
+            os.makedirs(img_dir_class)
 
-    for phase in ('train','val'):
-        # create DBs
-        #image_db = lmdb.open(os.path.join(folder, '%s_db' % phase),
-                #map_async=True,
-                #max_dbs=0)
-        #label_db = lmdb.open(os.path.join(folder, '%s_labels' % phase),
-                #map_async=True,
-                #max_dbs=0)
+    # create DBs
+    train_image_db = lmdb.open(os.path.join(lmdb_dir, 'train_db'), map_async=True,max_dbs=0)
+    val_image_db = lmdb.open(os.path.join(lmdb_dir, 'val_db' ), map_async=True, max_dbs=0)
 
-        # add up all images to later create mean image
-        image_sum = np.zeros((1,crop_size,crop_size), 'float64')
+    #label_db = lmdb.open(os.path.join(folder, '%s_labels' % phase),
+            #map_async=True,
+            #max_dbs=0)
 
-        # arrays for image and label batch writing
-        image_batch = []
-        #label_batch = []
-        id = -1
+    # add up all images to later create mean image
+    image_sum = np.zeros((1,28,28), 'float64')
 
-        for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
-            imageid = filename[-9:]
-            imageid = imageid[:5]
-            id += 1
-            if id > max_images - 1:
-                continue
-            if ((id+4) % 4 == 0) and phase == 'train' :
-                continue
-            if ((id+4) % 4 != 0) and phase == 'val':
-                continue
+    # arrays for image and label batch writing
+    train_image_batch = []
+    val_image_batch = []
+    #label_batch = []
+    id = -1
 
-            print id
+    for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
+        imageid = filename[-9:]
+        imageid = imageid[:5]
+        id += 1
+        if id > max_images - 1:
+            continue
 
-            crop = cv2.imread(filename)
-            if crop is None:
-                continue
+        train_vs_val = randint(1,4)
+        if train_vs_val != 4:
+            phase = 'train'
+        if train_vs_val == 4:
+            phase = 'val'
 
-            crops = get_angled_crops(crop, crop_size * 10)
+        print id
 
-            for count1 in range(0,1000):
-                top = randint(0, 359)
-                bottom = top + randint(0, 359)
-                if bottom > 359:
-                    bottom = bottom - 360
+        crop = cv2.imread(filename)
+        if crop is None:
+            continue
 
-                combo = np.zeros((28,28))
-                combo[0:14,0:28] = crops[top]
-                combo[14:28,0:28] = crops[bottom]
+        crops = get_angled_crops(crop, crop_size * 10)
 
-                cv2.imwrite(lmdb_dir + '/' + str(1000 + top) + '/' + imageid + str(count1 ) + '.png', combo)
+        for count1 in range(0,1000):
+            #There are 360 classes representing the clockwise travel from
+            clockwise_travel_diff_angle = randint(0, 359)
+            #The start crop needs to be a random angle because otherwise lens, camera, lighting, compression, cropping, and background effects would falsely trained:
+            top = randint(0, 359)
+            bottom = top + clockwise_travel_diff_angle
+            if bottom > 359:
+                bottom = bottom - 360
 
+            combo = np.zeros((28,28))
+            combo[0:14,0:28] = crops[top]
+            combo[14:28,0:28] = crops[bottom]
 
-                #crop_crop = np.reshape(crop_crop, (1,crop_size,crop_size))
-                #image_sum += crop_crop
-                #label = x * 10 + y
-                #str_id = '{:08}'.format(id * 100 + classid)
+            #cv2.imwrite(img_dir + '/' + str(1000 + clockwise_travel_diff_angle) + '/' + imageid + str(count1).zfill(5) + '.png', combo)
 
-                # encode into Datum object
-                #datum = caffe.io.array_to_datum(crop_crop, label)
-                #image_batch.append([str_id, datum])
+            image_sum += combo
+            str_id = '{:08}'.format(id * 1000 + clockwise_travel_diff_angle)
+
+            # encode into Datum object
+            datum = caffe.io.array_to_datum(combo.reshape(1,28,28), clockwise_travel_diff_angle)
+            if phase == 'train':
+                train_image_batch.append([str_id, datum])
+
+            if phase == 'val':
+                val_image_batch.append([str_id, datum])
 
         # close databases
-        #_write_batch_to_lmdb(image_db, image_batch)
+        _write_batch_to_lmdb(train_image_db, train_image_batch)
+        _write_batch_to_lmdb(val_image_db, val_image_batch)
         #_write_batch_to_lmdb(label_db, label_batch)
-        #image_batch = []
+        train_image_batch = []
+        val_image_batch = []
         #label_batch = []
 
-        #image_db.close()
-        #label_db.close()
+    train_image_db.close()
+    val_image_db.close()
+    #label_db.close()
 
-        #if phase == 'train':
-            # save mean
-            #mean_image = (image_sum / id*100).astype('uint8')
-            #_save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
+    # save mean
+    mean_image = (image_sum / id*100).astype('uint8')
+    _save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
 
     return
 
