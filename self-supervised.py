@@ -12,7 +12,7 @@ import cv2
 import math
 from PIL import Image
 from random import randint
-
+import infer
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -83,29 +83,38 @@ def get_angled_crops(crop, crop_size):
 
 
 def infer_two_crops():
-    crop1 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30057.png')
-    crop2 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30057.png')
+    self_super = infer.get_classifier("self-super", 28)
+
+    crop1 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30074.png')
+    crop2 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30071.png')
     crops1 = get_angled_crops(crop1, 600)
     crops2 = get_angled_crops(crop2, 600)
-    for count1 in range(0, 100):
-        top = randint(0, 359)
-        bottom = top + randint(0, 359)
-        if bottom > 359:
-            bottom = bottom - 360
+    total_max_value = 0
+    total_hits = 0
+    for angle in range(0, 360):
+        #top = randint(0, 359)
+        #bottom = top + randint(0, 359)
+        #if bottom > 359:
+            #bottom = bottom - 360
 
         combo = np.zeros((28, 28))
-        combo[0:14, 0:28] = crops1[top]
-        combo[14:28, 0:28] = crops2[bottom]
-        angle = math.abs(top-bottom)
-        
+        combo[0:14, 0:28] = crops1[angle]
+        combo[14:28, 0:28] = crops2[angle]
+        self_super_score = self_super.predict(infer.get_caffe_image(combo, 28), oversample=False)
+        max_value = np.amax(self_super_score)
+        predicted_angle = np.argmax(self_super_score)
+        print angle, predicted_angle, max_value
+        total_max_value += max_value
+        if abs(angle - predicted_angle)  < 3:
+            total_hits += 1
 
-
-
-
+    print total_max_value, total_hits
     return
 
 def create_lmdbs():
     #Creates LMDBs for basic image classification
+
+    infer_two_crops()
 
     max_images = 10000
     crop_size = 60

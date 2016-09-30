@@ -1,234 +1,50 @@
-# Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
-#I can't get this work outside of DIGITS...
+# This works right now for a web cam. It would be nice if this was refactored into classes.
+# This does not find the center of the coin or resize right now.
+# so it's expecting the height of the camera to be adjusted so the penny is 406 pixals in diameter.
+# you have to move the penny to get to the correct spot to be cropped out.
 
-
-
-from __future__ import absolute_import
-
-import base64
-from collections import OrderedDict
-import h5py
-import os.path
-import tempfile
-import re
+import numpy as np
+import matplotlib.pyplot as plt
 import sys
+import cv2
+import cv2.cv as cv
 
+# Make sure that caffe is on the python path:
+# sys.path.append('~/caffe/python') using the ~ does not work, for some reason???
 sys.path.append('/home/pkrush/caffe/python')
-sys.path.append('/home/pkrush/digits')
-sys.path.append('/home/pkrush/digits/digits')
+import caffe
 
 
-if __name__ == '__main__':
-    dirname = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, os.path.join(dirname,'..','..'))
-    import digits.config
+def get_classifier(model_name, crop_size):
+    model_dir = model_name + '/'
+    image_dir = 'test-images/'
+    MODEL_FILE = model_dir + 'deploy.prototxt'
+    PRETRAINED = model_dir + 'snapshot.caffemodel'
+    meanFile = model_dir + 'mean.binaryproto'
 
-from digits import utils
+    # Open mean.binaryproto file
+    blob = caffe.proto.caffe_pb2.BlobProto()
+    data = open(meanFile, 'rb').read()
+    blob.ParseFromString(data)
+    mean_arr = np.array(caffe.io.blobproto_to_array(blob)).reshape(1, crop_size, crop_size)
+    print mean_arr.shape
 
-import digits
-from digits import device_query
-from digits.task import Task
-from digits.utils import subclass, override
-from digits.utils.image import embed_image_html
-from digits.status import Status
-from ..errors import InferenceError
+    net = caffe.Classifier(MODEL_FILE, PRETRAINED, image_dims=(crop_size, crop_size), mean=mean_arr, raw_scale=255)
+    return net
 
-
-@subclass
-class InferenceTask(Task):
-    """
-    A task for inference jobs
-    """
-
-    def __init__(self, model, images, epoch, layers, **kwargs):
-        """
-        Arguments:
-        model  -- trained model to perform inference on
-        images -- list of images to perform inference on, or path to a database
-        epoch  -- model snapshot to use
-        layers -- which layers to visualize (by default only the activations of the last layer)
-        """
-        # memorize parameters
-        self.model = model
-        self.images = images
-        self.epoch = epoch
-        self.layers = layers
-
-        self.image_list_path = None
-        self.inference_log_file = "inference.log"
-
-        # resources
-        self.gpu = None
-
-        # generated data
-        self.inference_data_filename = None
-        self.inference_inputs = None
-        self.inference_outputs = None
-        self.inference_layers = []
-
-        super(InferenceTask, self).__init__(**kwargs)
-
-    @override
-    def name(self):
-        return 'Infer Model'
-
-    @override
-    def __getstate__(self):
-        state = super(InferenceTask, self).__getstate__()
-        if 'inference_log' in state:
-            # don't save file handle
-            del state['inference_log']
-        return state
-
-    @override
-    def __setstate__(self, state):
-        super(InferenceTask, self).__setstate__(state)
-
-    @override
-    def before_run(self):
-        super(InferenceTask, self).before_run()
-        # create log file
-        self.inference_log = open(self.path(self.inference_log_file), 'a')
-        if type(self.images) is list:
-            # create a file to pass the list of images to perform inference on
-            imglist_handle, self.image_list_path = tempfile.mkstemp(dir=self.job_dir, suffix='.txt')
-            for image_path in self.images:
-                os.write(imglist_handle, "%s\n" % image_path)
-            os.close(imglist_handle)
-
-    @override
-    def process_output(self, line):
-        self.inference_log.write('%s\n' % line)
-        self.inference_log.flush()
-
-        timestamp, level, message = self.preprocess_output_digits(line)
-        if not message:
-            return False
-
-        # progress
-        match = re.match(r'Processed (\d+)\/(\d+)', message)
-        if match:
-            self.progress = float(match.group(1))/int(match.group(2))
-            return True
-
-        # path to inference data
-        match = re.match(r'Saved data to (.*)', message)
-        if match:
-            self.inference_data_filename = match.group(1).strip()
-            return True
-
-        return False
-
-    @override
-    def after_run(self):
-        super(InferenceTask, self).after_run()
-
-        # retrieve inference data
-        visualizations = []
-        outputs = OrderedDict()
-        if self.inference_data_filename is not None:
-            # the HDF5 database contains:
-            # - input images, in a dataset "/inputs"
-            # - all network outputs, in a group "/outputs/"
-            # - layer activations and weights, if requested, in a group "/layers/"
-            db = h5py.File(self.inference_data_filename, 'r')
-
-            # collect paths and data
-            input_ids = db['input_ids'][...]
-            input_data = db['input_data'][...]
-
-            # collect outputs
-            o = []
-            for output_key, output_data in db['outputs'].items():
-                output_name = base64.urlsafe_b64decode(str(output_key))
-                o.append({'id': output_data.attrs['id'], 'name': output_name, 'data': output_data[...]})
-            # sort outputs by ID
-            o = sorted(o, key=lambda x:x['id'])
-            # retain only data (using name as key)
-            for output in o:
-                outputs[output['name']] = output['data']
-
-            # collect layer data, if applicable
-            if 'layers' in db.keys():
-                for layer_id, layer in db['layers'].items():
-                    visualization = {
-                        'id': int(layer_id),
-                        'name': layer.attrs['name'],
-                        'vis_type': layer.attrs['vis_type'],
-                        'data_stats': {
-                            'shape': layer.attrs['shape'],
-                            'mean': layer.attrs['mean'],
-                            'stddev': layer.attrs['stddev'],
-                            'histogram': [
-                                layer.attrs['histogram_y'].tolist(),
-                                layer.attrs['histogram_x'].tolist(),
-                                layer.attrs['histogram_ticks'].tolist(),
-                                ]
-                        }
-                    }
-                    if 'param_count' in layer.attrs:
-                        visualization['param_count'] = layer.attrs['param_count']
-                    if 'layer_type' in layer.attrs:
-                        visualization['layer_type'] = layer.attrs['layer_type']
-                    vis = layer[...]
-                    if vis.shape[0] > 0:
-                        visualization['image_html'] = embed_image_html(vis)
-                    visualizations.append(visualization)
-                # sort by layer ID (as HDF5 ASCII sorts)
-                visualizations = sorted(visualizations,key=lambda x:x['id'])
-            db.close()
-            # save inference data for further use
-            self.inference_inputs = {'ids': input_ids, 'data': input_data}
-            self.inference_outputs = outputs
-            self.inference_layers = visualizations
-        self.inference_log.close()
-
-    @override
-    def offer_resources(self, resources):
-        reserved_resources = {}
-        # we need one CPU resource from inference_task_pool
-        cpu_key = 'inference_task_pool'
-        if cpu_key not in resources:
-            return None
-        for resource in resources[cpu_key]:
-            if resource.remaining() >= 1:
-                reserved_resources[cpu_key] = [(resource.identifier, 1)]
-                # we reserve the first available GPU, if there are any
-                gpu_key = 'gpus'
-                if resources[gpu_key]:
-                    for resource in resources[gpu_key]:
-                        if resource.remaining() >= 1:
-                            self.gpu = int(resource.identifier)
-                            reserved_resources[gpu_key] = [(resource.identifier, 1)]
-                            break
-                return reserved_resources
-        return None
-
-    @override
-    def task_arguments(self, resources, env):
-
-        args = [sys.executable,
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(digits.__file__))), 'tools', 'inference.py'),
-            self.image_list_path if self.image_list_path is not None else self.images,
-            self.job_dir,
-            self.model.id(),
-            '--jobs_dir=%s' % digits.config.config_value('jobs_dir'),
-            ]
-
-        if self.epoch != None:
-            args.append('--epoch=%s' % repr(self.epoch))
-
-        if self.layers == 'all':
-            args.append('--layers=all')
-        else:
-            args.append('--layers=none')
-
-        if self.gpu is not None:
-            args.append('--gpu=%d' % self.gpu)
-
-        if self.image_list_path is None:
-            args.append('--db')
-
-        return args
+def get_labels(model_name):
+    labels_file = model_name + '/labels.txt'
+    labels = [line.rstrip('\n') for line in open(labels_file)]
+    return labels
 
 
+def get_caffe_image(crop, crop_size):
+    # this is how you get the image from file:
+    # coinImage = [caffe.io.load_image("some file", color=False)]
+
+    caffe_image = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    caffe_image = caffe_image.astype(np.float32) / 255
+    caffe_image = np.array(caffe_image).reshape(crop_size, crop_size, 1)
+    # Caffe wants a list so []:
+    caffe_images = [caffe_image]
+    return caffe_images
