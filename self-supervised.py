@@ -1,4 +1,11 @@
 #Derived from https://github.com/NVIDIA/DIGITS/examples/siamese/create_db.py
+#This has Zero Accurarcy when you get away from the 0/360 angle.
+
+#How could this test work better:
+#I question if this is mapping images correctly
+#Fix:  Count1 is 1-1000 but it’s only saving 360. I bet not doing seq writing to the lmdb and slowing down more.
+
+
 
 import argparse
 from collections import defaultdict
