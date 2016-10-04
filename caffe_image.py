@@ -66,7 +66,7 @@ def get_angled_crops(crop, crop_size):
 
     return crops
 
-def _save_image(image, filename):
+def save_image(image, filename):
     # converting from BGR to RGB
     image = image[[2,1,0],...] # channel swap
     #convert to (height, width, channels)
@@ -74,7 +74,7 @@ def _save_image(image, filename):
     image = PIL.Image.fromarray(image)
     image.save(filename)
 
-def _save_mean(mean, filename):
+def save_mean(mean, filename):
     """
     Saves mean to file
 
@@ -93,7 +93,7 @@ def _save_mean(mean, filename):
             outfile.write(blob.SerializeToString())
 
     elif filename.endswith(('.jpg', '.jpeg', '.png')):
-        _save_image(mean, filename)
+        save_image(mean, filename)
     else:
         raise ValueError('unrecognized file extension')
 

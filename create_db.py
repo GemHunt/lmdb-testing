@@ -1,14 +1,14 @@
-#Derived from https://github.com/NVIDIA/DIGITS/examples/siamese/create_db.py
+#This makes crops up images on a 10x10 grid and creates lmdbs will 100 classes.
 
-import argparse
-from collections import defaultdict
 import os
-import random
-import re
 import sys
 import time
 import glob
 import cv2
+import lmdb
+import numpy as np
+import caffe_image
+import caffe_lmdb
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -18,10 +18,6 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-
-import lmdb
-import numpy as np
-import PIL.Image
 
 
 if __name__ == '__main__':
@@ -104,7 +100,7 @@ def create_lmdbs():
 
 
         # close databases
-        _write_batch_to_lmdb(image_db, image_batch)
+        caffe_lmdb._write_batch_to_lmdb(image_db, image_batch)
         #_write_batch_to_lmdb(label_db, label_batch)
         image_batch = []
         #label_batch = []
@@ -115,63 +111,9 @@ def create_lmdbs():
         if phase == 'train':
             # save mean
             mean_image = (image_sum / id*100).astype('uint8')
-            _save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
+            caffe_image.save_mean(mean_image, os.path.join(folder, 'mean.binaryproto'))
 
     return
-
-def _write_batch_to_lmdb(db, batch):
-    """
-    Write a batch of (key,value) to db
-    """
-    try:
-        with db.begin(write=True) as lmdb_txn:
-            for key, datum in batch:
-                lmdb_txn.put(key, datum.SerializeToString())
-    except lmdb.MapFullError:
-        # double the map_size
-        curr_limit = db.info()['map_size']
-        new_limit = curr_limit*2
-        try:
-            db.set_mapsize(new_limit) # double it
-        except AttributeError as e:
-            version = tuple(int(x) for x in lmdb.__version__.split('.'))
-            if version < (0,87):
-                raise Error('py-lmdb is out of date (%s vs 0.87)' % lmdb.__version__)
-            else:
-                raise e
-        # try again
-        _write_batch_to_lmdb(db, batch)
-
-def _save_image(image, filename):
-    # converting from BGR to RGB
-    image = image[[2,1,0],...] # channel swap
-    #convert to (height, width, channels)
-    image = image.astype('uint8').transpose((1,2,0))
-    image = PIL.Image.fromarray(image)
-    image.save(filename)
-
-def _save_mean(mean, filename):
-    """
-    Saves mean to file
-
-    Arguments:
-    mean -- the mean as an np.ndarray
-    filename -- the location to save the image
-    """
-    if filename.endswith('.binaryproto'):
-        blob = caffe_pb2.BlobProto()
-        blob.num = 1
-        blob.channels = mean.shape[0]
-        blob.height = mean.shape[1]
-        blob.width = mean.shape[2]
-        blob.data.extend(mean.astype(float).flat)
-        with open(filename, 'wb') as outfile:
-            outfile.write(blob.SerializeToString())
-
-    elif filename.endswith(('.jpg', '.jpeg', '.png')):
-        _save_image(mean, filename)
-    else:
-        raise ValueError('unrecognized file extension')
 
 if __name__ == '__main__':
     start_time = time.time()

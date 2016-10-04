@@ -5,6 +5,7 @@
 # Fix:  Count1 is 1-1000 but its only saving 360.
 # I bet not doing seq writing to the lmdb and slowing down more.
 
+
 import os
 import sys
 import time
@@ -143,8 +144,8 @@ def create_lmdbs():
                 val_image_batch.append([str_id, datum])
 
         # close databases
-        _write_batch_to_lmdb(train_image_db, train_image_batch)
-        _write_batch_to_lmdb(val_image_db, val_image_batch)
+        caffe_lmdb._write_batch_to_lmdb(train_image_db, train_image_batch)
+        caffe_lmdb._write_batch_to_lmdb(val_image_db, val_image_batch)
         # _write_batch_to_lmdb(label_db, label_batch)
         train_image_batch = []
         val_image_batch = []
@@ -156,32 +157,9 @@ def create_lmdbs():
 
     # save mean
     mean_image = (image_sum / id * 100).astype('uint8')
-    _save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
+    caffe_image.save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
 
     return
-
-def _write_batch_to_lmdb(db, batch):
-    """
-    Write a batch of (key,value) to db
-    """
-    try:
-        with db.begin(write=True) as lmdb_txn:
-            for key, datum in batch:
-                lmdb_txn.put(key, datum.SerializeToString())
-    except lmdb.MapFullError:
-        # double the map_size
-        curr_limit = db.info()['map_size']
-        new_limit = curr_limit * 2
-        try:
-            db.set_mapsize(new_limit)  # double it
-        except AttributeError as e:
-            version = tuple(int(x) for x in lmdb.__version__.split('.'))
-            if version < (0, 87):
-                raise Error('py-lmdb is out of date (%s vs 0.87)' % lmdb.__version__)
-            else:
-                raise e
-        # try again
-        _write_batch_to_lmdb(db, batch)
 
 if __name__ == '__main__':
     start_time = time.time()
