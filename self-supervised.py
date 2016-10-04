@@ -5,8 +5,6 @@
 #I question if this is mapping images correctly
 #Fix:  Count1 is 1-1000 but it’s only saving 360. I bet not doing seq writing to the lmdb and slowing down more.
 
-
-
 import argparse
 from collections import defaultdict
 import os
@@ -19,7 +17,9 @@ import cv2
 import math
 from PIL import Image
 from random import randint
+
 import infer
+import caffe-image
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -54,7 +54,6 @@ def rotate(img, angle):
     return img;
 
 def rotate_point(angle, center_x,center_y,point_x,point_y):
-    rotated = (0,0)
     rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
     rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y;
     return rotated_x,rotated_y
