@@ -36,15 +36,3 @@ def get_labels(model_name):
     labels_file = model_name + '/labels.txt'
     labels = [line.rstrip('\n') for line in open(labels_file)]
     return labels
-
-
-def get_caffe_image(crop, crop_size):
-    # this is how you get the image from file:
-    # coinImage = [caffe.io.load_image("some file", color=False)]
-
-    caffe_image = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
-    caffe_image = caffe_image.astype(np.float32) / 255
-    caffe_image = np.array(caffe_image).reshape(crop_size, crop_size, 1)
-    # Caffe wants a list so []:
-    caffe_images = [caffe_image]
-    return caffe_images

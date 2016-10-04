@@ -1,5 +1,3 @@
-# coding=utf-8
-# Derived from https://github.com/NVIDIA/DIGITS/examples/siamese/create_db.py
 # This has Zero Accurarcy when you get away from the 0/360 angle.
 
 # How could this test work better:
@@ -7,21 +5,16 @@
 # Fix:  Count1 is 1-1000 but its only saving 360.
 # I bet not doing seq writing to the lmdb and slowing down more.
 
-import argparse
-from collections import defaultdict
 import os
-import random
-import re
 import sys
 import time
 import glob
 import cv2
-import math
-from PIL import Image
 from random import randint
 
 import infer
 import caffe_image
+import caffe_lmdb
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -34,7 +27,6 @@ except ImportError:
 
 import lmdb
 import numpy as np
-import PIL.Image
 
 if __name__ == '__main__':
     dirname = os.path.dirname(os.path.realpath(__file__))
@@ -53,8 +45,8 @@ def infer_two_crops():
 
     crop1 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30074.png')
     crop2 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30071.png')
-    crops1 = get_angled_crops(crop1, 600)
-    crops2 = get_angled_crops(crop2, 600)
+    crops1 = caffe_image.get_angled_crops(crop1, 600)
+    crops2 = caffe_image.get_angled_crops(crop2, 600)
     total_max_value = 0
     total_hits = 0
     for angle in range(0, 360):
@@ -72,9 +64,8 @@ def infer_two_crops():
     print total_max_value, total_hits
     return
 
-
 def create_lmdbs():
-    max_images = 10000
+    max_images = 1
     crop_size = 60
     lmdb_dir = '/home/pkrush/lmdb-files'
     if not os.path.exists(lmdb_dir):
@@ -123,7 +114,7 @@ def create_lmdbs():
         if crop is None:
             continue
 
-        crops = get_angled_crops(crop, crop_size * 10)
+        crops = caffe_image.get_angled_crops(crop, crop_size * 10)
 
         for count1 in range(0, 1000):
             # There are 360 classes representing the clockwise travel from
@@ -169,7 +160,6 @@ def create_lmdbs():
 
     return
 
-
 def _write_batch_to_lmdb(db, batch):
     """
     Write a batch of (key,value) to db
@@ -192,40 +182,6 @@ def _write_batch_to_lmdb(db, batch):
                 raise e
         # try again
         _write_batch_to_lmdb(db, batch)
-
-
-def _save_image(image, filename):
-    # converting from BGR to RGB
-    image = image[[2, 1, 0], ...]  # channel swap
-    # convert to (height, width, channels)
-    image = image.astype('uint8').transpose((1, 2, 0))
-    image = PIL.Image.fromarray(image)
-    image.save(filename)
-
-
-def _save_mean(mean, filename):
-    """
-    Saves mean to file
-
-    Arguments:
-    mean -- the mean as an np.ndarray
-    filename -- the location to save the image
-    """
-    if filename.endswith('.binaryproto'):
-        blob = caffe_pb2.BlobProto()
-        blob.num = 1
-        blob.channels = mean.shape[0]
-        blob.height = mean.shape[1]
-        blob.width = mean.shape[2]
-        blob.data.extend(mean.astype(float).flat)
-        with open(filename, 'wb') as outfile:
-            outfile.write(blob.SerializeToString())
-
-    elif filename.endswith(('.jpg', '.jpeg', '.png')):
-        _save_image(mean, filename)
-    else:
-        raise ValueError('unrecognized file extension')
-
 
 if __name__ == '__main__':
     start_time = time.time()
