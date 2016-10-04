@@ -30,7 +30,12 @@ def rotate(img, angle):
     rows, cols = img.shape
     M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
-    return img;
+    return img
+
+def rotate(img, angle,center_x,center_y,rows,cols):
+    M = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
+    cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
+    return img
 
 def rotate_point(angle, center_x,center_y,point_x,point_y):
     rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
