@@ -1,10 +1,3 @@
-# This has Zero Accurarcy when you get away from the 0/360 angle.
-
-# How could this test work better:
-# I question if this is mapping images correctly
-# Fix:  Count1 is 1-1000 but its only saving 360.
-# I bet not doing seq writing to the lmdb and slowing down more.
-
 import os
 import sys
 import time
@@ -40,29 +33,49 @@ from digits import utils
 import caffe.io
 from caffe.proto import caffe_pb2
 
+def get_whole_rotated_image(crop,mask,angle, crop_size):
+    center_x = 75 + (random.random() * 4) - 2
+    center_y = 75 + (random.random() * 4) - 2
 
-def infer_two_crops():
-    self_super = infer.get_classifier("self-super", 28)
+    rot_image = crop.copy()
+    rot_image = caffe_image.rotate(rot_image, angle, center_x, center_y, 150, 150)
+    rot_image = cv2.resize(rot_image, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    rot_image = rot_image * mask
 
-    crop1 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30052.png')
-    crop2 = cv2.imread('/home/pkrush/2-camera-scripts/crops/30070.png')
-    crops1 = caffe_image.get_angled_crops(crop1, 600)
-    crops2 = caffe_image.get_angled_crops(crop2, 600)
-    total_max_value = 0
-    total_hits = 0
-    for angle in range(0, 360):
-        combo = np.zeros((28, 28))
-        combo[0:14, 0:28] = crops1[angle]
-        combo[14:28, 0:28] = crops2[angle]
-        self_super_score = self_super.predict(infer.get_caffe_image(combo, 28), oversample=False)
-        max_value = np.amax(self_super_score)
-        predicted_angle = np.argmax(self_super_score)
-        print angle, predicted_angle, max_value
-        total_max_value += max_value
-        if abs(angle - predicted_angle) < 3:
-            total_hits += 1
+    return rot_image
 
-    print total_max_value, total_hits
+def get_circle_mask(crop,crop_size):
+    mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
+    cv2.circle(mask, (crop_size/2, crop_size/2), (crop_size/2)-2, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
+    return mask
+
+def infer_one_coin():
+    crop_size = 60
+    one_coin_rotated = infer.get_classifier("one_coin_rotated", crop_size)
+    crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30052.png')
+    if crop is None:
+        return
+
+    crop = cv2.resize(crop, (150, 150), interpolation=cv2.INTER_AREA)
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+
+    mask = get_circle_mask(crop,crop_size)
+    scores = []
+    for count1 in range(0, 100):
+        random_angle = random.random() * 360
+        class_angle = int(round(random_angle))
+        rot_image = get_whole_rotated_image(crop, mask, random_angle, crop_size)
+        rot_image = caffe_image.get_caffe_image(rot_image, crop_size)
+        one_coin_rotated_score = one_coin_rotated.predict(rot_image, oversample=False)
+        max_value = np.amax(one_coin_rotated_score)
+        predicted_angle = np.argmax(one_coin_rotated_score)
+        print random_angle, predicted_angle, max_value
+        diff_angle = random_angle - predicted_angle
+        if diff_angle > 0:
+            diff_angle += 360
+        scores.append(diff_angle )
+
+    print scores
     return
 
 def create_lmdbs():
@@ -108,6 +121,8 @@ def create_lmdbs():
 
         print id
         #crop = cv2.imread(filename)
+
+
         crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30070.png')
         if crop is None:
             continue
@@ -115,21 +130,19 @@ def create_lmdbs():
         crop = cv2.resize(crop, (150,150), interpolation=cv2.INTER_AREA)
         crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-        mask = np.zeros((60,60), dtype=np.uint8)
+        mask = get_circle_mask(crop)
+        mask = np.zeros((60, 60), dtype=np.uint8)
         cv2.circle(mask, (30, 30), 28, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
 
 
         for count1 in range(0, 10000):
             random_angle = random.random() * 360
             class_angle = int(round(random_angle))
-            center_x = 75 + (random.random() * 4) - 2
-            center_y = 75 + (random.random() * 4) - 2
 
-            rot_image = crop.copy()
-            rot_image = caffe_image.rotate(rot_image, random_angle, center_x, center_y, 150, 150)
-            rot_image = cv2.resize(rot_image, (crop_size,crop_size), interpolation=cv2.INTER_AREA)
-            rot_image = rot_image * mask
-            cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + imageid + str(count1).zfill(5) + '.png', rot_image)
+            rot_image = get_whole_rotated_image(crop, mask, random_angle, crop_size)
+
+            cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + imageid + str(count1).zfill(5) + '.png',
+                        rot_image)
             rot_image = rot_image.reshape(1, crop_size, crop_size)
 
             image_sum += rot_image
@@ -164,6 +177,7 @@ def create_lmdbs():
 if __name__ == '__main__':
     start_time = time.time()
 
-    create_lmdbs()
+    #create_lmdbs()
+    infer_one_coin()
 
     print 'Done after %s seconds' % (time.time() - start_time,)
