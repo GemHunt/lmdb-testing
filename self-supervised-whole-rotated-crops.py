@@ -5,7 +5,7 @@ import glob
 import cv2
 from random import randint
 import random
-
+import matplotlib.pyplot as plt
 import infer
 import caffe_image
 import caffe_lmdb
@@ -52,7 +52,7 @@ def get_circle_mask(crop,crop_size):
 def infer_one_coin():
     crop_size = 60
     one_coin_rotated = infer.get_classifier("one_coin_rotated", crop_size)
-    crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30052.png')
+    crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30287.png')
     if crop is None:
         return
 
@@ -60,7 +60,9 @@ def infer_one_coin():
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
     mask = get_circle_mask(crop,crop_size)
+    diff_angles = []
     scores = []
+
     for count1 in range(0, 100):
         random_angle = random.random() * 360
         class_angle = int(round(random_angle))
@@ -70,13 +72,39 @@ def infer_one_coin():
         max_value = np.amax(one_coin_rotated_score)
         predicted_angle = np.argmax(one_coin_rotated_score)
         print random_angle, predicted_angle, max_value
-        diff_angle = random_angle - predicted_angle
-        if diff_angle > 0:
+        diff_angle = int(round((random_angle - predicted_angle))/5) * 5
+        if diff_angle < 0:
             diff_angle += 360
-        scores.append(diff_angle )
+        scores.append(max_value)
+        diff_angles.append(diff_angle)
+
+
+    diff_angles.sort()
+    import pandas as pd
+    df = pd.DataFrame({'diff':diff_angles,'score':scores})
+    print df
+    # Create group object
+    one = df.groupby('diff')
+    print one
+
+    # Apply sum function
+    grouped = one.sum()
+    print grouped
+
+
+    grouped.plot()
+    plt.show()
+
+
+
+    from scipy.interpolate import spline
+    xnew = np.linspace(T.min(), T.max(), 300)
+    power_smooth = spline(T, power, xnew)
 
     print scores
+
     return
+
 
 def create_lmdbs():
     max_images = 1
@@ -123,7 +151,7 @@ def create_lmdbs():
         #crop = cv2.imread(filename)
 
 
-        crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30070.png')
+        crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30380.png')
         if crop is None:
             continue
 

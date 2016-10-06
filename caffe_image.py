@@ -102,13 +102,13 @@ def save_mean(mean, filename):
     else:
         raise ValueError('unrecognized file extension')
 
-    def get_caffe_image(crop, crop_size):
-        # this is how you get the image from file:
-        # coinImage = [caffe.io.load_image("some file", color=False)]
+def get_caffe_image(crop, crop_size):
+    # this is how you get the image from file:
+    # coinImage = [caffe.io.load_image("some file", color=False)]
 
-        caffe_image = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
-        caffe_image = caffe_image.astype(np.float32) / 255
-        caffe_image = np.array(caffe_image).reshape(crop_size, crop_size, 1)
-        # Caffe wants a list so []:
-        caffe_images = [caffe_image]
-        return caffe_images
+    caffe_image = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    caffe_image = caffe_image.astype(np.float32) / 255
+    caffe_image = np.array(caffe_image).reshape(crop_size, crop_size, 1)
+    # Caffe wants a list so []:
+    caffe_images = [caffe_image]
+    return caffe_images
