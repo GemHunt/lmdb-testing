@@ -134,63 +134,62 @@ def create_lmdbs():
     val_image_batch = []
     id = -1
 
-    for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
-        imageid = filename[-9:]
-        imageid = imageid[:5]
-        id += 1
-        if id > max_images - 1:
-            continue
+    #for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
+    #imageid = filename[-9:]
+    #imageid = imageid[:5]
+    #id += 1
+    #if id > max_images - 1:
+        #continue
 
-        train_vs_val = randint(1, 4)
-        if train_vs_val != 4:
-            phase = 'train'
-        if train_vs_val == 4:
-            phase = 'val'
+    train_vs_val = randint(1, 4)
+    if train_vs_val != 4:
+        phase = 'train'
+    if train_vs_val == 4:
+        phase = 'val'
 
-        print id
-        #crop = cv2.imread(filename)
-
-
-        crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30380.png')
-        if crop is None:
-            continue
-
-        crop = cv2.resize(crop, (150,150), interpolation=cv2.INTER_AREA)
-        crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-
-        mask = get_circle_mask(crop)
-        mask = np.zeros((60, 60), dtype=np.uint8)
-        cv2.circle(mask, (30, 30), 28, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
+    #print id
+    #crop = cv2.imread(filename)
 
 
-        for count1 in range(0, 10000):
-            random_angle = random.random() * 360
-            class_angle = int(round(random_angle))
+    crop = cv2.imread('/home/pkrush/copper/test.jpg')
+    #if crop is None:
+        #continue
 
-            rot_image = get_whole_rotated_image(crop, mask, random_angle, crop_size)
+    crop = cv2.resize(crop, (150,150), interpolation=cv2.INTER_AREA)
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-            cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + imageid + str(count1).zfill(5) + '.png',
-                        rot_image)
-            rot_image = rot_image.reshape(1, crop_size, crop_size)
+    mask = get_circle_mask(crop,crop_size)
+    mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
+    cv2.circle(mask, (crop_size/2, crop_size/2), 28, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
 
-            image_sum += rot_image
-            str_id = '{:08}'.format(id * 1000 + class_angle)
 
-            # encode into Datum object
-            datum = caffe.io.array_to_datum(rot_image, class_angle)
-            if phase == 'train':
-                train_image_batch.append([str_id, datum])
+    for angle in range(0, 36000):
+        class_angle = int(round(angle/100))
 
-            if phase == 'val':
-                val_image_batch.append([str_id, datum])
+        rot_image = get_whole_rotated_image(crop, mask, float(angle)/100, crop_size)
 
-        # close databases
-        caffe_lmdb._write_batch_to_lmdb(train_image_db, train_image_batch)
-        caffe_lmdb._write_batch_to_lmdb(val_image_db, val_image_batch)
-        # _write_batch_to_lmdb(label_db, label_batch)
-        train_image_batch = []
-        val_image_batch = []
-        # label_batch = []
+        cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(angle).zfill(5) + '.png',
+                    rot_image)
+        rot_image = rot_image.reshape(1, crop_size, crop_size)
+
+        image_sum += rot_image
+        str_id = '{:08}'.format(id * 1000 + class_angle)
+
+        # encode into Datum object
+        datum = caffe.io.array_to_datum(rot_image, class_angle)
+        if phase == 'train':
+            train_image_batch.append([str_id, datum])
+
+        if phase == 'val':
+            val_image_batch.append([str_id, datum])
+
+    # close databases
+    caffe_lmdb._write_batch_to_lmdb(train_image_db, train_image_batch)
+    caffe_lmdb._write_batch_to_lmdb(val_image_db, val_image_batch)
+    # _write_batch_to_lmdb(label_db, label_batch)
+    train_image_batch = []
+    val_image_batch = []
+    # label_batch = []
 
     train_image_db.close()
     val_image_db.close()
@@ -205,7 +204,7 @@ def create_lmdbs():
 if __name__ == '__main__':
     start_time = time.time()
 
-    #create_lmdbs()
-    infer_one_coin()
+    create_lmdbs()
+    #infer_one_coin()
 
     print 'Done after %s seconds' % (time.time() - start_time,)
