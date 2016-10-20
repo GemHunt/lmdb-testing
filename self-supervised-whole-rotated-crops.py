@@ -34,32 +34,35 @@ import caffe.io
 from caffe.proto import caffe_pb2
 
 def get_whole_rotated_image(crop,mask,angle, crop_size):
-    center_x = 75 + (random.random() * 4) - 2
-    center_y = 75 + (random.random() * 4) - 2
+    before_rotate_size = 100
+    center_x = before_rotate_size/2 + (random.random() * 2) - 1
+    center_y = before_rotate_size/2 + (random.random() * 2) - 1
 
     rot_image = crop.copy()
-    rot_image = caffe_image.rotate(rot_image, angle, center_x, center_y, 150, 150)
+    rot_image = caffe_image.rotate(rot_image, angle, center_x, center_y, before_rotate_size, before_rotate_size)
     rot_image = cv2.resize(rot_image, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
     rot_image = rot_image * mask
 
     return rot_image
 
-def get_circle_mask(crop,crop_size):
+def get_circle_mask(crop_size):
     mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
-    cv2.circle(mask, (crop_size/2, crop_size/2), (crop_size/2)-2, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
+    cv2.circle(mask, (crop_size/2, crop_size/2), (crop_size/2), 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
     return mask
 
 def infer_one_coin():
-    crop_size = 60
+    crop_size = 28
+    before_rotate_size = 100
+
     one_coin_rotated = infer.get_classifier("one_coin_rotated", crop_size)
     crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30287.png')
     if crop is None:
         return
 
-    crop = cv2.resize(crop, (150, 150), interpolation=cv2.INTER_AREA)
+    crop = cv2.resize(crop, (before_rotate_size, before_rotate_size), interpolation=cv2.INTER_AREA)
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-    mask = get_circle_mask(crop,crop_size)
+    mask = get_circle_mask(crop_size)
     diff_angles = []
     scores = []
 
@@ -108,7 +111,8 @@ def infer_one_coin():
 
 def create_lmdbs():
     max_images = 1
-    crop_size = 60
+    crop_size = 28
+    before_rotate_size = 100
     classes = 360
     lmdb_dir = '/home/pkrush/lmdb-files'
     if not os.path.exists(lmdb_dir):
@@ -155,13 +159,10 @@ def create_lmdbs():
     #if crop is None:
         #continue
 
-    crop = cv2.resize(crop, (150,150), interpolation=cv2.INTER_AREA)
+    crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-    mask = get_circle_mask(crop,crop_size)
-    mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
-    cv2.circle(mask, (crop_size/2, crop_size/2), 28, 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
-
+    mask = get_circle_mask(crop_size)
 
     for angle in range(0, 36000):
         class_angle = int(round(angle/100))
