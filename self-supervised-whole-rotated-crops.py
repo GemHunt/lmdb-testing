@@ -110,7 +110,9 @@ def infer_one_coin():
 
 
 def create_lmdbs():
-    max_images = 1
+    start_time = time.time()
+
+    max_images = 100
     crop_size = 28
     before_rotate_size = 100
     classes = 360
@@ -133,64 +135,65 @@ def create_lmdbs():
     # add up all images to later create mean image
     image_sum = np.zeros((1, crop_size, crop_size), 'float64')
 
-
     # arrays for image and label batch writing
     train_image_batch = []
     val_image_batch = []
     id = -1
 
-    #for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
-    #imageid = filename[-9:]
-    #imageid = imageid[:5]
-    #id += 1
-    #if id > max_images - 1:
-        #continue
+    for filename in glob.iglob('/home/pkrush/copper/heads/*.jpg'):
+        #imageid = filename[-9:]
+        #imageid = imageid[:5]
+        id += 1
+        if id > max_images - 1:
+            break
 
-    train_vs_val = randint(1, 4)
-    if train_vs_val != 4:
-        phase = 'train'
-    if train_vs_val == 4:
-        phase = 'val'
+        train_vs_val = randint(1, 4)
+        if train_vs_val != 4:
+            phase = 'train'
+        if train_vs_val == 4:
+            phase = 'val'
 
-    #print id
-    #crop = cv2.imread(filename)
+        #print id
+        #crop = cv2.imread(filename)
 
 
-    crop = cv2.imread('/home/pkrush/copper/test.jpg')
-    #if crop is None:
-        #continue
+        #crop = cv2.imread('/home/pkrush/copper/test.jpg')
+        crop = cv2.imread(filename)
+        #if crop is None:
+            #continue
 
-    crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
-    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
+        crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-    mask = get_circle_mask(crop_size)
+        mask = get_circle_mask(crop_size)
 
-    for angle in range(0, 36000):
-        class_angle = int(round(angle/100))
+        for count in range(0, 360):
+            angle = float(count)
+            class_angle = int(round(angle))
 
-        rot_image = get_whole_rotated_image(crop, mask, float(angle)/100, crop_size)
+            rot_image = get_whole_rotated_image(crop, mask, angle, crop_size)
 
-        #cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(angle).zfill(5) + '.png',rot_image)
+            #cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(angle).zfill(5) + '.png',rot_image)
 
-        datum = caffe_pb2.Datum()
-        datum.data = cv2.imencode('.png', rot_image)[1].tostring()
-        datum.label = class_angle
-        datum.encoded = 1
+            datum = caffe_pb2.Datum()
+            datum.data = cv2.imencode('.png', rot_image)[1].tostring()
+            #datum.data = cv2.imencode('.png', rot_image).tostring()
+            datum.label = class_angle
+            datum.encoded = 1
 
-        rot_image = rot_image.reshape(1, crop_size, crop_size)
-        image_sum += rot_image
-        # datum = caffe.io.array_to_datum(rot_image, class_angle)
+            rot_image = rot_image.reshape(1, crop_size, crop_size)
+            image_sum += rot_image
+            # datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-        #str_id = '{:08}'.format(id * 1000 + class_angle)
-        str_id = '{:08}'.format(angle)
+            #key = '{:08}'.format(id * 1000 + class_angle)
+            #key = '{:08}'.format(angle)
 
-        if phase == 'train':
-            train_image_batch.append([str_id, datum])
+            #if phase == 'train':
+            train_image_batch.append([filename + "," + str(angle), datum])
 
-        if phase == 'val':
-            val_image_batch.append([str_id, datum])
+            #if phase == 'val':
+                #val_image_batch.append([key, datum])
 
-    # close databases
     caffe_lmdb._write_batch_to_lmdb(train_image_db, train_image_batch)
     caffe_lmdb._write_batch_to_lmdb(val_image_db, val_image_batch)
     # _write_batch_to_lmdb(label_db, label_batch)
@@ -205,13 +208,14 @@ def create_lmdbs():
     # save mean
     mean_image = (image_sum / id * 100).astype('uint8')
     caffe_image.save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
+    print 'Done after %s seconds' % (time.time() - start_time,)
 
     return
 
 if __name__ == '__main__':
-    start_time = time.time()
+
 
     create_lmdbs()
     #infer_one_coin()
 
-    print 'Done after %s seconds' % (time.time() - start_time,)
+
