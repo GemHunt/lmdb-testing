@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import infer
 import caffe_image
 import caffe_lmdb
+import shutil
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -42,7 +43,6 @@ def get_whole_rotated_image(crop,mask,angle, crop_size):
     rot_image = caffe_image.rotate(rot_image, angle, center_x, center_y, before_rotate_size, before_rotate_size)
     rot_image = cv2.resize(rot_image, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
     rot_image = rot_image * mask
-
     return rot_image
 
 def get_circle_mask(crop_size):
@@ -115,6 +115,7 @@ def create_lmdbs():
     before_rotate_size = 100
     classes = 360
     lmdb_dir = '/home/pkrush/lmdb-files'
+    shutil.rmtree(lmdb_dir)
     if not os.path.exists(lmdb_dir):
         os.makedirs(lmdb_dir)
     img_dir = '/home/pkrush/img-files'
@@ -169,15 +170,20 @@ def create_lmdbs():
 
         rot_image = get_whole_rotated_image(crop, mask, float(angle)/100, crop_size)
 
-        cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(angle).zfill(5) + '.png',
-                    rot_image)
+        #cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(angle).zfill(5) + '.png',rot_image)
+
+        datum = caffe_pb2.Datum()
+        datum.data = cv2.imencode('.png', rot_image)[1].tostring()
+        datum.label = class_angle
+        datum.encoded = 1
+
         rot_image = rot_image.reshape(1, crop_size, crop_size)
-
         image_sum += rot_image
-        str_id = '{:08}'.format(id * 1000 + class_angle)
+        # datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-        # encode into Datum object
-        datum = caffe.io.array_to_datum(rot_image, class_angle)
+        #str_id = '{:08}'.format(id * 1000 + class_angle)
+        str_id = '{:08}'.format(angle)
+
         if phase == 'train':
             train_image_batch.append([str_id, datum])
 
