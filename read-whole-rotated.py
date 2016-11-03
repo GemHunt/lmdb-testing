@@ -5,20 +5,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import cv2
-
-
-def rotate(img, angle):
-    rows, cols = img.shape
-    M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
-    cv2.warpAffine(img, M, (cols, rows), img, cv2.INTER_CUBIC)
-    return img;
+import caffe_image as ci
 
 
 angle_offset = 170
 img = cv2.imread('/home/pkrush/copper/test.jpg')
 cv2.imshow('test', img)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-gray = rotate(gray, angle_offset)
+gray = ci.rotate(gray, angle_offset)
 cv2.imshow('test_rotated', gray)
 
 pd.set_option('display.max_rows', 10000)
@@ -60,6 +54,9 @@ print 'Done 2.5 %s seconds' % (time.time() - start_time,)
 index = range(0,360)
 full_index = Series([0]*360,index = index)
 
+
+
+
 for key in keys:
     plt.gcf().clear()
     figManager = plt.get_current_fig_manager()
@@ -71,25 +68,28 @@ for key in keys:
     result_totals = result_totals + full_index
     result_totals = result_totals * correction
     plt.title(key)
-    #plt.plot(result_totals)
     #smoth = result_totals
     #smoth = np.convolve(result_totals, [.0214, .1359, .3413, .3413, .1359, .0214 ], 'same')
-    smoth = np.convolve(result_totals, [.1,.1,.1,.1,.2,.2,.2,.2,.3,.3,.3,.3, .2,.2,.2,.2,.1,.1,.1,.1 ],'same')
-    angle = np.argmax(smoth)
-    max_value = np.amax(smoth)
-    if max_value < 35:
+    #smoth = np.convolve(result_totals, [.1,.1,.1,.1,.2,.2,.2,.2,.3,.3,.3,.3, .2,.2,.2,.2,.1,.1,.1,.1 ],'same')
+    angle = np.argmax(result_totals)
+    max_value = np.amax(result_totals)
+    if max_value < 15:
         continue
     img = cv2.imread(key)
     cv2.imshow('image', img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = rotate(gray, angle + angle_offset)
+    adjusted_angle = angle + angle_offset
+    if adjusted_angle > 360:
+        adjusted_angle -= 360
+    gray = ci.rotate(gray, adjusted_angle)
+    print "adjusted_angle", adjusted_angle
     cv2.imshow('image_rotated', gray)
 
-    print type(smoth)
-    smoth = Series(smoth)
+    #print type(smoth)
+    #smoth = Series(smoth)
     plt.plot(result_totals)
-    plt.plot(smoth)
-    print smoth
+    #plt.plot(smoth)
+    #print smoth
     #plt.plot(correction)
     print 'Done 6 %s seconds' % (time.time() - start_time,)
     plt.show()

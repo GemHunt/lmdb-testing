@@ -32,7 +32,7 @@ def rotate(img, angle):
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img
 
-def rotate(img, angle,center_x,center_y,rows,cols):
+def rotatew(img, angle,center_x,center_y,rows,cols):
     M = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img
