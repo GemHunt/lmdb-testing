@@ -26,13 +26,13 @@ import caffe.io
 from caffe.proto import caffe_pb2
 
 
-def rotate(img, angle):
+def center_rotate(img, angle):
     rows, cols = img.shape
     M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img
 
-def rotatew(img, angle,center_x,center_y,rows,cols):
+def rotate(img, angle,center_x,center_y,rows,cols):
     M = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img

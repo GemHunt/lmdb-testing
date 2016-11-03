@@ -12,7 +12,7 @@ angle_offset = 170
 img = cv2.imread('/home/pkrush/copper/test.jpg')
 cv2.imshow('test', img)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-gray = ci.rotate(gray, angle_offset)
+gray = ci.center_rotate(gray, angle_offset)
 cv2.imshow('test_rotated', gray)
 
 pd.set_option('display.max_rows', 10000)
@@ -54,9 +54,6 @@ print 'Done 2.5 %s seconds' % (time.time() - start_time,)
 index = range(0,360)
 full_index = Series([0]*360,index = index)
 
-
-
-
 for key in keys:
     plt.gcf().clear()
     figManager = plt.get_current_fig_manager()
@@ -81,7 +78,7 @@ for key in keys:
     adjusted_angle = angle + angle_offset
     if adjusted_angle > 360:
         adjusted_angle -= 360
-    gray = ci.rotate(gray, adjusted_angle)
+    gray = ci.center_rotate(gray, adjusted_angle)
     print "adjusted_angle", adjusted_angle
     cv2.imshow('image_rotated', gray)
 
