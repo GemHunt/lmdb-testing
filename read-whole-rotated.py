@@ -8,7 +8,8 @@ import cv2
 import caffe_image as ci
 
 
-angle_offset = 170
+#angle_offset = 170
+angle_offset = 0
 img = cv2.imread('/home/pkrush/copper/test.jpg')
 cv2.imshow('test', img)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -43,6 +44,7 @@ df = pd.concat([df_plus,df_neg])
 result_totals = df.groupby('prediction')['result'].sum().values
 correction  = result_totals / (result_totals.sum() / 360)
 keys = df.key.unique()
+results = []
 
 for count in range(0, 360):
     if correction[count] < .5:
@@ -70,30 +72,24 @@ for key in keys:
     #smoth = np.convolve(result_totals, [.1,.1,.1,.1,.2,.2,.2,.2,.3,.3,.3,.3, .2,.2,.2,.2,.1,.1,.1,.1 ],'same')
     angle = np.argmax(result_totals)
     max_value = np.amax(result_totals)
-    if max_value < 15:
-        continue
+    results.append([key,max_value,angle])
+
+sorted_results  = sorted(results, key=lambda result: result[1])
+index = 0
+for key,max_value,angle in sorted_results:
+    #if max_value < 7:
+        #continue
     img = cv2.imread(key)
     cv2.imshow('image', img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     adjusted_angle = angle + angle_offset
-    if adjusted_angle > 360:
-        adjusted_angle -= 360
     gray = ci.center_rotate(gray, adjusted_angle)
-    print "adjusted_angle", adjusted_angle
     cv2.imshow('image_rotated', gray)
-
-    #print type(smoth)
-    #smoth = Series(smoth)
-    plt.plot(result_totals)
-    #plt.plot(smoth)
-    #print smoth
-    #plt.plot(correction)
-    print 'Done 6 %s seconds' % (time.time() - start_time,)
-    plt.show()
-    pass
+    index += 1
+    print index, max_value
 
 
-
+    cv2.waitKey(0)
 
 sys.exit()
 

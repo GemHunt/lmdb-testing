@@ -112,7 +112,7 @@ def infer_one_coin():
 def create_lmdbs():
     start_time = time.time()
 
-    max_images = 100
+    max_images = 1000
     crop_size = 28
     before_rotate_size = 100
     classes = 360
@@ -140,7 +140,7 @@ def create_lmdbs():
     val_image_batch = []
     id = -1
 
-    for filename in glob.iglob('/home/pkrush/copper/heads/*.jpg'):
+    for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
         #imageid = filename[-9:]
         #imageid = imageid[:5]
         id += 1
