@@ -5,6 +5,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+
 def _write_batch_to_lmdb(db, batch):
     """
     Write a batch of (key,value) to db
