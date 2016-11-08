@@ -68,7 +68,7 @@ def infer_two_crops():
 def create_lmdbs():
     max_images = 1
     crop_size = 60
-    lmdb_dir = '/home/pkrush/lmdb-files'
+    lmdb_dir = '/home/pkrush/train/lmdb-files'
     if not os.path.exists(lmdb_dir):
         os.makedirs(lmdb_dir)
     img_dir = '/home/pkrush/img-files'
