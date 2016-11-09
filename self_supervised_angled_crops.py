@@ -1,9 +1,11 @@
-# This has Zero Accurarcy when you get away from the 0/360 angle.
-
-# How could this test work better:
-# I question if this is mapping images correctly
-# Fix:  Count1 is 1-1000 but its only saving 360.
-# I bet not doing seq writing to the lmdb and slowing down more.
+'''
+A sloppy test of questionable value at this point.
+Currently this has Zero Accurarcy when you get away from the 0/360 angle.
+but, I question if this is mapping images correctly
+How could this test work better:
+    Fix:  Count1 is 1-1000 but its only saving 360.
+    I bet not doing seq writing to the lmdb and slowing down more.
+'''
 
 
 import os
@@ -144,9 +146,9 @@ def create_lmdbs():
                 val_image_batch.append([str_id, datum])
 
         # close databases
-        caffe_lmdb._write_batch_to_lmdb(train_image_db, train_image_batch)
-        caffe_lmdb._write_batch_to_lmdb(val_image_db, val_image_batch)
-        # _write_batch_to_lmdb(label_db, label_batch)
+        caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
+        caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
+        # write_batch_to_lmdb(label_db, label_batch)
         train_image_batch = []
         val_image_batch = []
         # label_batch = []

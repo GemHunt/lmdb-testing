@@ -1,7 +1,11 @@
+"""This module is a group of functions for dealing with images in general and how they relate to Caffe."""
+
 import os
 import sys
 import cv2
 import math
+import random
+
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
 
@@ -25,6 +29,21 @@ from digits import utils
 import caffe.io
 from caffe.proto import caffe_pb2
 
+def get_whole_rotated_image(crop,mask,angle, crop_size):
+    before_rotate_size = 100
+    center_x = before_rotate_size/2 + (random.random() * 2) - 1
+    center_y = before_rotate_size/2 + (random.random() * 2) - 1
+
+    rot_image = crop.copy()
+    rot_image = rotate(rot_image, angle, center_x, center_y, before_rotate_size, before_rotate_size)
+    rot_image = cv2.resize(rot_image, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    rot_image = rot_image * mask
+    return rot_image
+
+def get_circle_mask(crop_size):
+    mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
+    cv2.circle(mask, (crop_size/2, crop_size/2), (crop_size/2), 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
+    return mask
 
 def center_rotate(img, angle):
     rows, cols = img.shape
@@ -41,7 +60,6 @@ def rotate_point(angle, center_x,center_y,point_x,point_y):
     rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
     rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y;
     return rotated_x,rotated_y
-
 
 def rotate_matrix(angle, center_x,center_y,mat):
     rotated = mat.copy()

@@ -1,3 +1,7 @@
+'''
+A set of functions to test out self supervised rotated coin image models
+'''
+
 import cPickle as pickle
 import random
 import glob
@@ -27,7 +31,8 @@ def rename_crops():
         os.rename(filename, crop_dir + str(key) + '.jpg')
 
 
-rename_crops()
+rename_crops():
+    pass
 
 
 

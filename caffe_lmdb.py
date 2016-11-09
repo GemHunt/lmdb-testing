@@ -6,9 +6,9 @@ except ImportError:
     from StringIO import StringIO
 
 
-def _write_batch_to_lmdb(db, batch):
+def write_batch_to_lmdb(db, batch):
     """
-    Write a batch of (key,value) to db
+    Write a batch of (key,value) to a lmdb
     """
     try:
         with db.begin(write=True) as lmdb_txn:
@@ -27,4 +27,4 @@ def _write_batch_to_lmdb(db, batch):
             else:
                 raise e
         # try again
-        _write_batch_to_lmdb(db, batch)
+        write_batch_to_lmdb(db, batch)
