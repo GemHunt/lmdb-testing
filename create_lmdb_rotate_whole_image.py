@@ -31,15 +31,16 @@ from digits import utils
 import caffe.io
 from caffe.proto import caffe_pb2
 
-def create_lmdbs(filenames, create_files = False):
+def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, create_files = False):
     start_time = time.time()
 
     max_images = 105
     crop_size = 28
     before_rotate_size = 100
     classes = 360
-    lmdb_dir = '/home/pkrush/lmdb-files/train'
-    shutil.rmtree(lmdb_dir)
+    if os.path.exists(lmdb_dir):
+        shutil.rmtree(lmdb_dir)
+
     if not os.path.exists(lmdb_dir):
         os.makedirs(lmdb_dir)
 
@@ -66,7 +67,7 @@ def create_lmdbs(filenames, create_files = False):
     id = -1
 
     #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
-    for filename, angle_offset in filenames:
+    for index_id, filename, angle_offset in filedata:
 
         #imageid = filename[-9:]
         #imageid = imageid[:5]
@@ -74,24 +75,26 @@ def create_lmdbs(filenames, create_files = False):
         if id > max_images - 1:
             break
 
-        train_vs_val = randint(1, 4)
-        if train_vs_val != 4:
-            phase = 'train'
-        if train_vs_val == 4:
-            phase = 'val'
-
         #crop = cv2.imread('/home/pkrush/copper/test.jpg')
         crop = cv2.imread(filename)
-        #if crop is None:
-            #continue
+        if crop is None:
+            continue
 
         crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
         crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
         mask = ci.get_circle_mask(crop_size)
 
-        for count in range(0, 3600):
-            angle = float(count) / 10
+        phase = 'train'
+        if create_val_set:
+            train_vs_val = randint(1, 4)
+            if train_vs_val != 4:
+                phase = 'train'
+            if train_vs_val == 4:
+                phase = 'val'
+
+        for count in range(0, images_per_angle * 360):
+            angle = float(count) / images_per_angle
             class_angle = int(round(angle))
             angle_to_rotate = angle + angle_offset
             if angle_to_rotate > 360:
@@ -111,22 +114,33 @@ def create_lmdbs(filenames, create_files = False):
 
             rot_image = rot_image.reshape(1, crop_size, crop_size)
             image_sum += rot_image
-            # datum = caffe.io.array_to_datum(rot_image, class_angle)
+            #datum = caffe.io.array_to_datum(rot_image, class_angle)
 
             #key = '{:08}'.format(id * 1000 + class_angle)
             #key = '{:08}'.format(angle)
 
-            #if phase == 'train':
-            train_image_batch.append([filename + "," + str(angle), datum])
+            #For one coin val does nothing. For many coins this code should be outside the loop:
+            if id < 10:
+                if create_val_set:
+                    train_vs_val = randint(1, 4)
+                    if train_vs_val != 4:
+                        phase = 'train'
+                    if train_vs_val == 4:
+                        phase = 'val'
 
-            #if phase == 'val':
-                #val_image_batch.append([key, datum])
+            if phase == 'train':
+                train_image_batch.append([str(index_id) + "," + str(angle), datum])
+
+            if phase == 'val':
+                val_image_batch.append([str(index_id) + "," + str(angle), datum])
+
+            #if they get too big:
+                #train_image_batch = []
+                #val_image_batch = []
 
     caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
     caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
-    # write_batch_to_lmdb(label_db, label_batch)
-    train_image_batch = []
-    val_image_batch = []
+
     # label_batch = []
 
     train_image_db.close()
@@ -134,7 +148,7 @@ def create_lmdbs(filenames, create_files = False):
     # label_db.close()
 
     # save mean
-    mean_image = (image_sum / id * 100).astype('uint8')
+    mean_image = (image_sum / (id + 1) * images_per_angle * 360).astype('uint8')
     ci.save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
     print 'Done after %s seconds' % (time.time() - start_time,)
 
