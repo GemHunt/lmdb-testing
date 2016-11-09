@@ -68,7 +68,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
 
     #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
     for index_id, filename, angle_offset in filedata:
-
+        print index_id
         #imageid = filename[-9:]
         #imageid = imageid[:5]
         id += 1
@@ -134,12 +134,11 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             if phase == 'val':
                 val_image_batch.append([str(index_id) + "," + str(angle), datum])
 
-            #if they get too big:
-                #train_image_batch = []
-                #val_image_batch = []
+        caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
+        caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
+        train_image_batch = []
+        val_image_batch = []
 
-    caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
-    caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
 
     # label_batch = []
 

@@ -18,7 +18,7 @@ index_filename = data_dir + 'index.p'
 
 
 def create_index():
-    index = [random.randint(1000, 13827) for x in range(25)]
+    index = [random.randint(1000, 13828) for x in range(25)]
     pickle.dump(index, open(index_filename , "wb") )
 
 def get_index():
@@ -36,15 +36,30 @@ def rename_crops():
         key += 1
         os.rename(filename, crop_dir + str(key) + '.jpg')
 
-def create_single_lmdbs():
-    index = get_index()
-
+def create_lmdbs(index):
     for image_id in index:
         filedata = [[image_id,crop_dir + str(image_id) + '.jpg',0]]
         lmdb_dir = train_dir + str(image_id) + '/'
         create_lmdb_rotate_whole_image.create_lmdbs(filedata,lmdb_dir,100)
         print 'create single lmdb for ' + str(image_id)
 
+def create_single_lmdbs():
+    index = get_index()
+    for image_id in index:
+        filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
+        lmdb_dir = train_dir + str(image_id) + '/'
+        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100)
+        print 'create single lmdb for ' + str(image_id)
 
-create_single_lmdbs()
+def create_test_lmdbs():
+    index = [x for x in range(1000)]
+    filedata = []
+    for image_id in index:
+        filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
+
+    lmdb_dir = test_dir + str(0) + '/'
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False)
+    print 'create single lmdb for ' + str(image_id)
+
+create_test_lmdbs()
 
