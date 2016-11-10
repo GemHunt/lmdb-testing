@@ -36,13 +36,6 @@ def rename_crops():
         key += 1
         os.rename(filename, crop_dir + str(key) + '.jpg')
 
-def create_lmdbs(index):
-    for image_id in index:
-        filedata = [[image_id,crop_dir + str(image_id) + '.jpg',0]]
-        lmdb_dir = train_dir + str(image_id) + '/'
-        create_lmdb_rotate_whole_image.create_lmdbs(filedata,lmdb_dir,100)
-        print 'create single lmdb for ' + str(image_id)
-
 def create_single_lmdbs():
     index = get_index()
     for image_id in index:
@@ -58,8 +51,9 @@ def create_test_lmdbs():
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
     lmdb_dir = test_dir + str(0) + '/'
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,create_val_set = False)
     print 'create single lmdb for ' + str(image_id)
 
-create_test_lmdbs()
+
+create_single_lmdbs()
 

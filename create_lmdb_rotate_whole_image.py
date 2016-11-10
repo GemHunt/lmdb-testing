@@ -34,7 +34,7 @@ from caffe.proto import caffe_pb2
 def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, create_files = False):
     start_time = time.time()
 
-    max_images = 105
+    max_images = 1111
     crop_size = 28
     before_rotate_size = 100
     classes = 360
@@ -95,7 +95,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
 
         for count in range(0, images_per_angle * 360):
             angle = float(count) / images_per_angle
-            class_angle = int(round(angle))
+            class_angle = int(round(angle)) + 1000
             angle_to_rotate = angle + angle_offset
             if angle_to_rotate > 360:
                 angle_to_rotate - 360
@@ -104,7 +104,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             rot_image = ci.get_whole_rotated_image(crop, mask, angle_to_rotate, crop_size)
 
             if create_files:
-                cv2.imwrite(img_dir + '/' + str(1000 + class_angle) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
+                cv2.imwrite(img_dir + '/' + str(class_angle) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
 
             datum = caffe_pb2.Datum()
             datum.data = cv2.imencode('.png', rot_image)[1].tostring()
@@ -129,10 +129,10 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
                         phase = 'val'
 
             if phase == 'train':
-                train_image_batch.append([str(index_id) + "," + str(angle), datum])
+                train_image_batch.append([str(index_id) + "," + str(class_angle), datum])
 
             if phase == 'val':
-                val_image_batch.append([str(index_id) + "," + str(angle), datum])
+                val_image_batch.append([str(index_id) + "," + str(class_angle), datum])
 
         caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
         caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
