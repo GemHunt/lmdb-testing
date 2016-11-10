@@ -1,5 +1,4 @@
 """This module is a group of functions for dealing with images in general and how they relate to Caffe."""
-
 import os
 import sys
 import cv2

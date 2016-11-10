@@ -55,5 +55,5 @@ def create_test_lmdbs():
     print 'create single lmdb for ' + str(image_id)
 
 
-create_single_lmdbs()
 
+create_test_lmdbs()
