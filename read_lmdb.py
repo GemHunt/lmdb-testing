@@ -1,8 +1,7 @@
 '''
 Reads images lmdb from databases
 Unfinished as a function
-#Started from http://deepdish.io/2015/04/28/creating-lmdb-in-python/
-#Some example code to read images in LMDB files.
+Started from http://deepdish.io/2015/04/28/creating-lmdb-in-python/
 '''
 
 
@@ -13,13 +12,13 @@ sys.path.append('/home/pkrush/caffe/python')
 import caffe
 import cv2
 
-def get_batch(db, batch):
+def get_batch():
 
     filename = '/home/pkrush/lmdb-files/val_db'
-    #png: filename = '/home/pkrush/digits/digits/jobs/20160923-121704-e4cc/train_db'
+    filename = '/home/pkrush/digits/digits/jobs/20160923-121704-e4cc/train_db'
     #No encoding:
-    #filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
-
+    filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
+    filename = '/home/pkrush/lmdb-files/train/11525/train_db'
 
     env = lmdb.open(filename, readonly=True)
     print env.stat()
@@ -37,9 +36,13 @@ def get_batch(db, batch):
             datum.ParseFromString(value)
             flat_x = np.fromstring(datum.data, dtype=np.uint8)
             #x = flat_x.reshape(datum.channels, datum.height, datum.width)
-            x = flat_x.reshape(datum.height, datum.width)
+            #x = flat_x.reshape(datum.height, datum.width)
             y = datum.label
+            print key, y
             count += 1
-            cv2.imshow('x', x)
+            #cv2.imshow('x', x)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
+
+get_batch()

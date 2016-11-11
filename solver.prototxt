@@ -9,5 +9,5 @@ weight_decay: 8e-05
 snapshot: 0
 snapshot_prefix: "snapshot"
 solver_mode: GPU
-net: "/home/pkrush/lmdb-files/train/11525/train_val.prototxt"
+net: "replace_dir_name_train_val.prototxt"
 solver_type: SGD

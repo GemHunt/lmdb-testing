@@ -8,9 +8,11 @@ layer {
   }
   transform_param {
     scale: 0.0125000001863
+    mean_file: "replace_dir_name_mean.binaryproto"
+
   }
   data_param {
-    source: "/home/pkrush/lmdb-files/train/11525/train_db"
+    source: "replace_dir_name_train_db"
     batch_size: 64
     backend: LMDB
   }
@@ -25,9 +27,10 @@ layer {
   }
   transform_param {
     scale: 0.0125000001863
+    mean_file: "replace_dir_name_mean.binaryproto"
   }
   data_param {
-    source: "/home/pkrush/lmdb-files/train/11525/val_db"
+    source: "replace_dir_name_val_db"
     batch_size: 32
     backend: LMDB
   }

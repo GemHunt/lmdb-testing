@@ -4,6 +4,7 @@ import time
 import glob
 import cv2
 from random import randint
+import random
 import caffe_image as ci
 import caffe_lmdb
 import shutil
@@ -94,13 +95,16 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             if train_vs_val == 4:
                 phase = 'val'
 
+        angles = []
         for count in range(0, images_per_angle * 360):
-            angle = float(count) / images_per_angle
+            angles.append([random.random(), float(count) / images_per_angle])
+        angles.sort()
+
+        for random_float,angle in angles:
             class_angle = int(round(angle))
             if class_angle == 360:
                 class_angle = 0
 
-            print class_angle
             angle_to_rotate = angle + angle_offset
             if angle_to_rotate > 360:
                 angle_to_rotate - 360
