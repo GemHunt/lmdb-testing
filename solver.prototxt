@@ -1,0 +1,13 @@
+test_iter: 282
+test_interval: 422
+base_lr: 0.008
+display: 52
+max_iter: 844
+lr_policy: "fixed"
+momentum: 0.9
+weight_decay: 8e-05
+snapshot: 0
+snapshot_prefix: "snapshot"
+solver_mode: GPU
+net: "/home/pkrush/lmdb-files/train/11525/train_val.prototxt"
+solver_type: SGD

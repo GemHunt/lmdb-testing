@@ -8,10 +8,9 @@ layer {
   }
   transform_param {
     scale: 0.0125000001863
-    mean_file: "mean.binaryproto"
   }
   data_param {
-    source: "/home/pkrush/jobs/20161020-171852-82c6/train_db"
+    source: "/home/pkrush/lmdb-files/train/11525/train_db"
     batch_size: 64
     backend: LMDB
   }
@@ -26,10 +25,9 @@ layer {
   }
   transform_param {
     scale: 0.0125000001863
-    mean_file: "mean.binaryproto"
   }
   data_param {
-    source: "/home/pkrush/jobs/20161020-171852-82c6/val_db"
+    source: "/home/pkrush/lmdb-files/train/11525/val_db"
     batch_size: 32
     backend: LMDB
   }

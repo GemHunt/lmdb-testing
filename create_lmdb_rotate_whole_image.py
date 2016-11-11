@@ -34,7 +34,7 @@ from caffe.proto import caffe_pb2
 def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, create_files = False):
     start_time = time.time()
 
-    max_images = 3
+    max_images = 9999
     crop_size = 28
     before_rotate_size = 100
     classes = 360
@@ -65,6 +65,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
     train_image_batch = []
     val_image_batch = []
     id = -1
+    key = -1
 
     #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
     for index_id, filename, angle_offset in filedata:
@@ -95,7 +96,11 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
 
         for count in range(0, images_per_angle * 360):
             angle = float(count) / images_per_angle
-            class_angle = int(round(angle)) + 1000
+            class_angle = int(round(angle))
+            if class_angle == 360:
+                class_angle = 0
+
+            print class_angle
             angle_to_rotate = angle + angle_offset
             if angle_to_rotate > 360:
                 angle_to_rotate - 360
@@ -104,21 +109,23 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             rot_image = ci.get_whole_rotated_image(crop, mask, angle_to_rotate, crop_size)
 
             if create_files:
-                cv2.imwrite(img_dir + '/' + str(class_angle) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
+                cv2.imwrite(img_dir + '/' + str(class_angle + 1000) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
 
             datum = caffe_pb2.Datum()
             datum.data = cv2.imencode('.png', rot_image)[1].tostring()
             #datum.data = cv2.imencode('.png', rot_image).tostring()
-            #datum.label = int(class_angle)
-            datum.label = 2
+            datum.label = int(class_angle)
             datum.encoded = 1
 
             rot_image = rot_image.reshape(1, crop_size, crop_size)
             image_sum += rot_image
             #datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-            #key = '{:08}'.format(id * 1000 + class_angle)
+            key += 1
+            #key_string = '{:08}'.format((id * 100000) +  count)
             #key = '{:08}'.format(angle)
+            str_id = '{:08}'.format(key)
+
 
             #For one coin val does nothing. For many coins this code should be outside the loop:
             if id < 10:
@@ -130,12 +137,12 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
                         phase = 'val'
 
             if phase == 'train':
-                #train_image_batch.append([str(index_id) + "," + str(class_angle), datum])
-                train_image_batch.append([str(index_id), datum])
+                #train_image_batch.append([str(index_id) + "," + str(angle + 1000), datum])
+                train_image_batch.append([str_id.encode('ascii'),datum])
 
             if phase == 'val':
-                #val_image_batch.append([str(index_id) + "," + str(class_angle), datum])
-                train_image_batch.append([str(index_id), datum])
+                #val_image_batch.append([str(index_id) + "," + str(angle + 1000), datum])
+                val_image_batch.append([str_id.encode('ascii'), datum])
 
         caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
         caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)

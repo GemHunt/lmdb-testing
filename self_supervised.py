@@ -56,4 +56,4 @@ def create_test_lmdbs():
 
 
 
-create_test_lmdbs()
+create_single_lmdbs()
