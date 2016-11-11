@@ -48,6 +48,7 @@ def create_single_lmdbs():
     index = get_index()
     weight_filename = 'starting-weights.caffemodel'
     shutil.copyfile(weight_filename, train_dir + weight_filename)
+    shutil.copyfile('deploy.prototxt', train_dir + 'deploy.prototxt')
     for image_id in index:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
@@ -64,7 +65,7 @@ def create_single_lmdbs():
         file_.write(shell_script)
 
 def create_test_lmdbs():
-    index = [x for x in range(1000)]
+    index = [x for x in range(10)]
     filedata = []
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
@@ -74,4 +75,6 @@ def create_test_lmdbs():
     print 'create single lmdb for ' + str(image_id)
 
 
-create_single_lmdbs()
+
+
+create_test_lmdbs()
