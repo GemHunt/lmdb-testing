@@ -43,6 +43,7 @@ def copy_file(filename,dir):
     with open(dir + filename, 'w') as file_:
         file_.write(data)
 
+
 def create_single_lmdbs():
     shell_script = '#!/bin/bash\n'
     index = get_index()
@@ -73,8 +74,6 @@ def create_test_lmdbs():
     lmdb_dir = test_dir + str(0) + '/'
     create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,create_val_set = False)
     print 'create single lmdb for ' + str(image_id)
-
-
 
 
 create_test_lmdbs()
