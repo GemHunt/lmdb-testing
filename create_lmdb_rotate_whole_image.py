@@ -69,8 +69,8 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
     key = -1
 
     #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
-    for index_id, filename, angle_offset in filedata:
-        print index_id
+    for image_id, filename, angle_offset in filedata:
+        print image_id
         #imageid = filename[-9:]
         #imageid = imageid[:5]
         id += 1
@@ -128,8 +128,8 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             key += 1
             #key_string = '{:08}'.format((id * 100000) +  count)
             #key = '{:08}'.format(angle)
-            str_id = '{:08}'.format(key)
-
+            str_id = '{:08}'.format(image_id)
+            str_id += ',' + '{:03}'.format(class_angle)
 
             #For one coin val does nothing. For many coins this code should be outside the loop:
             if id < 10:
@@ -141,11 +141,11 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
                         phase = 'val'
 
             if phase == 'train':
-                #train_image_batch.append([str(index_id) + "," + str(angle + 1000), datum])
+                #train_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
                 train_image_batch.append([str_id.encode('ascii'),datum])
 
             if phase == 'val':
-                #val_image_batch.append([str(index_id) + "," + str(angle + 1000), datum])
+                #val_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
                 val_image_batch.append([str_id.encode('ascii'), datum])
 
         caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)

@@ -19,6 +19,7 @@ def get_batch():
     #No encoding:
     filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
     filename = '/home/pkrush/lmdb-files/train/11525/train_db'
+    filename = '/home/pkrush/lmdb-files/test/0/train_db'
 
     env = lmdb.open(filename, readonly=True)
     print env.stat()

@@ -6,13 +6,13 @@ import numpy as np
 import sys
 import cv2
 import caffe_image as ci
-import self_supervised_whole_rotated_crops as self_supervised_whole_rotated_crops
+#import self_supervised_whole_rotated_crops as self_supervised_whole_rotated_crops
 
-def summarize_whole_rotated_model_results:
+def summarize_whole_rotated_model_results():
 
     #angle_offset = 170
     angle_offset = 0
-    img = cv2.imread('/home/pkrush/copper/test.jpg')
+    img = cv2.imread( '/home/pkrush/lmdb-files/crops/13294.jpg')
     cv2.imshow('test', img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = ci.center_rotate(gray, angle_offset)
@@ -93,7 +93,8 @@ def summarize_whole_rotated_model_results:
     index = 0
     filenames = []
     for key,max_value,angle in sorted_results:
-        img = cv2.imread(key)
+        filename = '/home/pkrush/lmdb-files/crops/' + str(key) + '.jpg'
+        img = cv2.imread(filename)
         cv2.imshow('image', img)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         adjusted_angle = angle + angle_offset
@@ -101,7 +102,7 @@ def summarize_whole_rotated_model_results:
         cv2.imshow('image_rotated', gray)
         index += 1
         print index, max_value
-        filenames.append([key,angle])
+        filenames.append([filename,angle])
         cv2.waitKey(0)
         if index >= 100:
             break
