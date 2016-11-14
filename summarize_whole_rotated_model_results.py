@@ -11,8 +11,8 @@ import caffe_image as ci
 def summarize_whole_rotated_model_results():
 
     #angle_offset = 170
-    angle_offset = 0
-    img = cv2.imread( '/home/pkrush/lmdb-files/crops/13294.jpg')
+    angle_offset = 35
+    img = cv2.imread('/home/pkrush/lmdb-files/crops/13294.jpg')
     cv2.imshow('test', img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = ci.center_rotate(gray, angle_offset)
@@ -101,7 +101,7 @@ def summarize_whole_rotated_model_results():
         gray = ci.center_rotate(gray, adjusted_angle)
         cv2.imshow('image_rotated', gray)
         index += 1
-        print index, max_value
+        print filename, index, max_value
         filenames.append([filename,angle])
         cv2.waitKey(0)
         if index >= 100:

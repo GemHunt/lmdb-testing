@@ -102,4 +102,4 @@ def read_test():
     summarize_whole_rotated_model_results.summarize_whole_rotated_model_results()
 
 
-create_test_lmdbs()
+read_test()
