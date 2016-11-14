@@ -128,8 +128,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             key += 1
             #key_string = '{:08}'.format((id * 100000) +  count)
             #key = '{:08}'.format(angle)
-            str_id = '{:08}'.format(image_id)
-            str_id += ',' + '{:03}'.format(class_angle)
+            str_id = str(key) + ',' + str(image_id) + ',' + str(class_angle)
 
             #For one coin val does nothing. For many coins this code should be outside the loop:
             if id < 10:

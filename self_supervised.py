@@ -57,6 +57,8 @@ def create_single_lmdbs():
         create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100)
         copy_file('solver.prototxt', lmdb_dir)
         copy_file('train_val.prototxt', lmdb_dir)
+        copy_file('deploy.prototxt', lmdb_dir)
+        copy_file('labels.txt', lmdb_dir)
         print 'create single lmdb for ' + str(image_id)
         shell_script += '/home/pkrush/caffe/build/tools/caffe '
         shell_script += 'train '
@@ -69,11 +71,11 @@ def create_single_lmdbs():
             file_.write(shell_script)
 
         fd = os.open(shell_filename, os.O_RDONLY)
-        os.fchmod(fd,777)
+        os.fchmod(fd,0777)
         os.close(fd)
 
 def create_test_lmdbs():
-    index = [x for x in range(100)]
+    index = [x for x in range(10)]
     filedata = []
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
@@ -81,25 +83,35 @@ def create_test_lmdbs():
     lmdb_dir = test_dir + str(0) + '/'
     create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,create_val_set = False)
 
+    #index = get_index()
+    #for image_id in index:
+    image_id = 2470
+
     shell_script = '#!/bin/bash\n'
     shell_script += '/home/pkrush/caffe/.build_release/examples/cpp_classification/classification.bin '
-    shell_script += '/home/pkrush/lmdb-files/train/13294/deploy.prototxt '
-    shell_script += '/home/pkrush/lmdb-files/train/13294/snapshot_iter_866.caffemodel '
-    shell_script += '/home/pkrush/lmdb-files/train/13294/mean.binaryproto '
-    shell_script += '/home/pkrush/lmdb-files/train/13294/labels.txt '
+    shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/deploy.prototxt '
+    shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/snapshot_iter_844.caffemodel '
+    shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/mean.binaryproto '
+    shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/labels.txt '
     shell_script += '/home/pkrush/lmdb-files/test/0/train_db/data.mdb '
-    shell_script += '2> ' + lmdb_dir + 'test.dat \n'
-    shell_filename = lmdb_dir + 'train-single-coin-lmdbs.sh'
+    shell_script += '> ' + lmdb_dir + 'test.dat \n'
+    shell_filename = lmdb_dir + 'test-single-coin-lmdbs.sh'
     with open(shell_filename, 'w') as file_:
         file_.write(shell_script)
 
     fd = os.open(shell_filename, os.O_RDONLY)
-    os.fchmod(fd, 777)
+    os.fchmod(fd, 0755)
     os.close(fd)
     print 'Wrote: ' + shell_filename
 
-def read_test():
-    summarize_whole_rotated_model_results.summarize_whole_rotated_model_results()
+def read_test(filename):
+    summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
 
 
-read_test()
+###Instructions:
+#create_index()
+#create_single_lmdbs()
+#in the train dir run ./train-single-coin-lmdbs.sh
+#create_test_lmdbs()
+#in the test dir run ./test-single-coin-lmdbs.sh
+read_test(test_dir + '0/test.dat')

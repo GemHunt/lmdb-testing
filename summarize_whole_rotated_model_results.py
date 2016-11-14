@@ -1,27 +1,27 @@
 from pandas import Series, DataFrame
 import pandas as pd
 import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import cv2
 import caffe_image as ci
 #import self_supervised_whole_rotated_crops as self_supervised_whole_rotated_crops
 
-def summarize_whole_rotated_model_results():
+def summarize_whole_rotated_model_results(filename):
 
     #angle_offset = 170
     angle_offset = 35
-    img = cv2.imread('/home/pkrush/lmdb-files/crops/13294.jpg')
-    cv2.imshow('test', img)
+    img = cv2.imread('/home/pkrush/lmdb-files/crops/1220.jpg')
+    #cv2.imshow('test', img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = ci.center_rotate(gray, angle_offset)
-    cv2.imshow('test_rotated', gray)
+    #cv2.imshow('test_rotated', gray)
 
     pd.set_option('display.max_rows', 10000)
 
     start_time = time.time()
-    df = pd.read_csv('out.dat')
+    df = pd.read_csv(filename)
     print 'Done 1 %s seconds' % (time.time() - start_time,)
     results = np.zeros((360,1), dtype=np.float)
     result_totals = np.zeros((360,1), dtype=np.float)
@@ -85,25 +85,26 @@ def summarize_whole_rotated_model_results():
         print 'Done 8 %s seconds' % (time.time() - start_time,)
 
         max_value = np.amax(result_totals)
+        total_value = np.sum(result_totals)
         print 'Done 9 %s seconds' % (time.time() - start_time,)
 
-        results.append([key,max_value,angle])
+        results.append([key,max_value,angle,total_value])
 
     sorted_results  = sorted(results, key=lambda result: result[1],reverse = True)
     index = 0
     filenames = []
-    for key,max_value,angle in sorted_results:
+    for key,max_value,angle,total_value in sorted_results:
         filename = '/home/pkrush/lmdb-files/crops/' + str(key) + '.jpg'
         img = cv2.imread(filename)
-        cv2.imshow('image', img)
+        #cv2.imshow('image', img)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         adjusted_angle = angle + angle_offset
         gray = ci.center_rotate(gray, adjusted_angle)
-        cv2.imshow('image_rotated', gray)
+        #cv2.imshow('image_rotated', gray)
         index += 1
-        print filename, index, max_value
+        print filename, index, max_value,angle,total_value
         filenames.append([filename,angle])
-        cv2.waitKey(0)
+        #cv2.waitKey(0)
         if index >= 100:
             break
 
@@ -141,8 +142,8 @@ def summarize_whole_rotated_model_results():
     print correction
     print result_mean
     #plt.plot(corrected_results)
-    plt.plot(result_mean)
-    plt.show()
+    #plt.plot(result_mean)
+    #plt.show()
 
 
 
