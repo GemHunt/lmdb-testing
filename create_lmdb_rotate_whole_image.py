@@ -47,7 +47,9 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
 
     if create_files:
         img_dir = '/home/pkrush/img-files'
-        shutil.rmtree(img_dir)
+
+        if os.path.exists(img_dir):
+            shutil.rmtree(img_dir)
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
         for x in range(0, classes):
@@ -128,7 +130,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             key += 1
             #key_string = '{:08}'.format((id * 100000) +  count)
             #key = '{:08}'.format(angle)
-            str_id = str(key) + ',' + str(image_id) + ',' + str(class_angle)
+            str_id = str(randint(0,9999999)) + ',' + str(image_id) + ',' + str(class_angle)
 
             #For one coin val does nothing. For many coins this code should be outside the loop:
             if id < 10:
