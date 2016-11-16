@@ -49,6 +49,7 @@ def create_single_lmdbs():
     index = get_index()
     weight_filename = 'starting-weights.caffemodel'
     shutil.copyfile(weight_filename, train_dir + weight_filename)
+    shell_filenames = []
     for image_id in index:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
@@ -58,7 +59,7 @@ def create_single_lmdbs():
         copy_file('deploy.prototxt', lmdb_dir)
         copy_file('labels.txt', lmdb_dir)
         print 'create single lmdb for ' + str(image_id)
-        shell_script = '#!/bin/bash\n'
+        shell_script = ''
         shell_script += '/home/pkrush/caffe/build/tools/caffe '
         shell_script += 'train '
 
@@ -67,12 +68,10 @@ def create_single_lmdbs():
         shell_script += '2> ' + lmdb_dir + 'caffe_output.log \n'
 
         shell_filename = lmdb_dir + 'train-single-coin-lmdbs.sh'
-        with open(shell_filename, 'w') as file_:
-            file_.write(shell_script)
+        shell_filenames.append(shell_filename)
+        create_shell_script(shell_filename, shell_script)
 
-        fd = os.open(shell_filename, os.O_RDONLY)
-        os.fchmod(fd,0777)
-        os.close(fd)
+    create_script_calling_script(train_dir + 'train_all', shell_filenames)
 
 def create_test_lmdbs():
     index = [x for x in range(100)]
@@ -81,11 +80,12 @@ def create_test_lmdbs():
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
+    #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
 
+    shell_filenames = []
     index = get_index()
     for image_id in index:
-        shell_script = '#!/bin/bash\n'
+        shell_script = ''
         shell_script += '/home/pkrush/caffe/.build_release/examples/cpp_classification/classification.bin '
         shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/deploy.prototxt '
         shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/snapshot_iter_844.caffemodel '
@@ -94,20 +94,38 @@ def create_test_lmdbs():
         shell_script += '/home/pkrush/lmdb-files/test/0/train_db/data.mdb '
         shell_script += '> ' + lmdb_dir + str(image_id) + '.dat \n'
         shell_filename = lmdb_dir + 'test-' + str(image_id) + '.sh'
-        with open(shell_filename, 'w') as file_:
-            file_.write(shell_script)
+        shell_filenames.append(shell_filename)
+        create_shell_script(shell_filename, shell_script)
 
-        fd = os.open(shell_filename, os.O_RDONLY)
-        os.fchmod(fd, 0755)
-        os.close(fd)
+    create_script_calling_script(test_dir + 'test_all', shell_filenames)
 
-def read_test(filename):
-    summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+
+def create_shell_script(filename,shell_script):
+    shell_script = '#!/bin/bash\n' + shell_script
+    with open(filename, 'w') as file_:
+        file_.write(shell_script)
+
+    fd = os.open(filename, os.O_RDONLY)
+    os.fchmod(fd, 0755)
+    os.close(fd)
+
+def create_script_calling_script(filename,shell_filenames):
+    shell_script = ''
+    for shell_filename in shell_filenames:
+        shell_script += shell_filename + '\n'
+
+    create_shell_script(filename, shell_script)
+
+def read_test():
+    index = get_index()
+    for image_id in index:
+        filename = test_dir + '0/' + str(image_id) + '.dat'
+        summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+
 
 ###Instructions:
 #create_index()
 #create_single_lmdbs()
 #in the train dir run ./train-single-coin-lmdbs.sh
-#create_test_lmdbs()
-#in the test dir run ./test-1221.sh
-read_test(test_dir + '0/2470.dat')
+create_test_lmdbs()#in the test dir run ./test-1221.sh
+#read_test()

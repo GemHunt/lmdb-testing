@@ -62,34 +62,34 @@ def summarize_whole_rotated_model_results(filename):
 
     for key in keys:
         #plt.gcf().clear()
-        print 'Done 1 %s seconds' % (time.time() - start_time,)
+        #print 'Done 1 %s seconds' % (time.time() - start_time,)
         #figManager = plt.get_current_fig_manager()
         #figManager.window.showMaximized()
-        print 'Done 2 %s seconds' % (time.time() - start_time,)
+        #print 'Done 2 %s seconds' % (time.time() - start_time,)
 
         #This is being done wrong and can be speed up somehome:
         df_filtered = df[df.key == key]
-        print 'Done 3 %s seconds' % (time.time() - start_time,)
+        #print 'Done 3 %s seconds' % (time.time() - start_time,)
         result_totals = df_filtered.groupby('prediction')['result'].sum()
-        print 'Done 4 %s seconds' % (time.time() - start_time,)
+        #print 'Done 4 %s seconds' % (time.time() - start_time,)
         result_totals = result_totals + full_index
-        print 'Done 5 %s seconds' % (time.time() - start_time,)
+        #print 'Done 5 %s seconds' % (time.time() - start_time,)
 
         result_totals = result_totals * correction
-        print 'Done 6 %s seconds' % (time.time() - start_time,)
+        #print 'Done 6 %s seconds' % (time.time() - start_time,)
 
         #plt.title(key)
         #smoth = result_totals
         #smoth = np.convolve(result_totals, [.0214, .1359, .3413, .3413, .1359, .0214 ], 'same')
         #smoth = np.convolve(result_totals, [.1,.1,.1,.1,.2,.2,.2,.2,.3,.3,.3,.3, .2,.2,.2,.2,.1,.1,.1,.1 ],'same')
-        print 'Done 7 %s seconds' % (time.time() - start_time,)
+        #print 'Done 7 %s seconds' % (time.time() - start_time,)
 
         angle = np.argmax(result_totals)
-        print 'Done 8 %s seconds' % (time.time() - start_time,)
+        #print 'Done 8 %s seconds' % (time.time() - start_time,)
 
         max_value = np.amax(result_totals)
         total_value = np.sum(result_totals)
-        print 'Done 9 %s seconds' % (time.time() - start_time,)
+        #print 'Done 9 %s seconds' % (time.time() - start_time,)
 
         results.append([key,max_value,angle,total_value])
 
@@ -113,6 +113,9 @@ def summarize_whole_rotated_model_results(filename):
 
     #self_supervised_whole_rotated_crops.create_lmdbs(filenames,True)
 
+
+    print 'Done 7 %s seconds' % (time.time() - start_time,)
+
     sys.exit()
 
 
@@ -126,7 +129,6 @@ def summarize_whole_rotated_model_results(filename):
     #    results[angle] += float(row['result'])
     #    result_totals[(1000-int(row['prediction']))] += float(row['result'])
 
-    print 'Done 7 %s seconds' % (time.time() - start_time,)
 
     for count in result_totals(0, 360):
         if result_totals[count] < .1:
