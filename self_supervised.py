@@ -73,10 +73,9 @@ def create_single_lmdbs():
         fd = os.open(shell_filename, os.O_RDONLY)
         os.fchmod(fd,0777)
         os.close(fd)
-        break
 
 def create_test_lmdbs():
-    index = [x for x in range(1)]
+    index = [x for x in range(100)]
     filedata = []
     lmdb_dir = test_dir + str(0) + '/'
     for image_id in index:
@@ -109,6 +108,6 @@ def read_test(filename):
 #create_index()
 #create_single_lmdbs()
 #in the train dir run ./train-single-coin-lmdbs.sh
-create_test_lmdbs()
+#create_test_lmdbs()
 #in the test dir run ./test-1221.sh
-#read_test(test_dir + '0/1221.dat')
+read_test(test_dir + '0/2470.dat')

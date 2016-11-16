@@ -122,7 +122,8 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             #key = '{:08}'.format(angle)
             #str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
             #str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
-            str_id = '{:08}'.format(key) + '_' + str(class_angle)
+            #00000000_123 is the key digits makes, but I still! don't know if I can change that.
+            str_id = '{:05}'.format(key) + ',' + '{:05}'.format(image_id) + ',' + str(class_angle)
 
             key += 1
 
