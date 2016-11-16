@@ -68,9 +68,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
     train_image_batch = []
     val_image_batch = []
     id = -1
-    key = -1
-
-    #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
+        #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
     for image_id, filename, angle_offset in filedata:
         print image_id
         #imageid = filename[-9:]
@@ -96,17 +94,10 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
                 phase = 'train'
             if train_vs_val == 4:
                 phase = 'val'
+        key = 0
+        angles = ci.get_angle_sequence(image_id , images_per_angle * 360)
 
-        angles = []
-        for count in range(0, images_per_angle * 360):
-            angles.append([random.random(), float(count) / images_per_angle])
-        angles.sort()
-
-        for random_float,angle in angles:
-            class_angle = int(round(angle))
-            if class_angle == 360:
-                class_angle = 0
-
+        for random_float,angle, class_angle in angles:
             angle_to_rotate = angle + angle_offset
             if angle_to_rotate > 360:
                 angle_to_rotate - 360
@@ -127,12 +118,15 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             image_sum += rot_image
             #datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-            key += 1
             #key_string = '{:08}'.format((id * 100000) +  count)
             #key = '{:08}'.format(angle)
-            str_id = str(randint(0,9999999)) + ',' + str(image_id) + ',' + str(class_angle)
+            #str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
+            #str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
+            str_id = '{:08}'.format(key) + '_' + str(class_angle)
 
-            #For one coin val does nothing. For many coins this code should be outside the loop:
+            key += 1
+
+            #Use different logic for the first ten crops:
             if id < 10:
                 if create_val_set:
                     train_vs_val = randint(1, 4)

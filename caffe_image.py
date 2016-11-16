@@ -129,3 +129,20 @@ def get_caffe_image(crop, crop_size):
     # Caffe wants a list so []:
     caffe_images = [caffe_image]
     return caffe_images
+
+def get_angle_sequence(image_id,length):
+    '''
+    Gets a repeatable sequence of random angles based on using the image_id as the seed.
+    (a hack for now because I can't read the label on the back end yet.)
+    '''
+    random.seed(image_id)
+    angles = []
+    for count in range(0, length):
+        angle = float(count) / (length/360)
+        class_angle = int(round(angle))
+        if class_angle == 360:
+            class_angle = 0
+        angles.append([random.random(), angle, class_angle])
+    angles.sort()
+    return angles
+

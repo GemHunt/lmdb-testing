@@ -7,12 +7,11 @@ layer {
     phase: TRAIN
   }
   transform_param {
-    scale: 0.0125000001863
-    mean_file: "replace_dir_name_mean.binaryproto"
-
+    scale: 0.0125
+    mean_file: "mean.binaryproto"
   }
   data_param {
-    source: "replace_dir_name_train_db"
+    source: "train_db"
     batch_size: 64
     backend: LMDB
   }
@@ -26,11 +25,11 @@ layer {
     phase: TEST
   }
   transform_param {
-    scale: 0.0125000001863
-    mean_file: "replace_dir_name_mean.binaryproto"
+    scale: 0.0125
+    mean_file: "mean.binaryproto"
   }
   data_param {
-    source: "replace_dir_name_val_db"
+    source: "val_db"
     batch_size: 32
     backend: LMDB
   }
@@ -131,7 +130,7 @@ layer {
   top: "ip1"
 }
 layer {
-  name: "ip2_retrain"
+  name: "ip2"
   type: "InnerProduct"
   bottom: "ip1"
   top: "ip2"

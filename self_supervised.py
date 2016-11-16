@@ -52,7 +52,7 @@ def create_single_lmdbs():
     for image_id in index:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
-        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,True,True)
+        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,True,False)
         copy_file('solver.prototxt', lmdb_dir)
         copy_file('train_val.prototxt', lmdb_dir)
         copy_file('deploy.prototxt', lmdb_dir)
@@ -82,7 +82,7 @@ def create_test_lmdbs():
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,True)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
 
     index = get_index()
     for image_id in index:

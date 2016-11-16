@@ -17,15 +17,16 @@ def get_batch():
     filename = '/home/pkrush/lmdb-files/val_db'
     filename = '/home/pkrush/digits/digits/jobs/20160923-121704-e4cc/train_db'
     #No encoding:
-    filename = '/home/pkrush/digits/digits/jobs/20160923-142347-4f08/train_db'
-    filename = '/home/pkrush/lmdb-files/train/11525/train_db'
+    #filename = '/home/pkrush/jobs/20161115-123135-f3d7/train_db'
+    #filename = '/home/pkrush/lmdb-files/train/1221/train_db'
     filename = '/home/pkrush/lmdb-files/test/0/train_db'
+
 
     env = lmdb.open(filename, readonly=True)
     print env.stat()
 
-    with env.begin() as txn:
-        raw_datum = txn.get(b'00000000')
+    #with env.begin() as txn:
+#        raw_datum = txn.get(b'00000000')
 
     datum = caffe.proto.caffe_pb2.Datum()
 
