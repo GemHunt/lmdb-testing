@@ -53,13 +53,13 @@ def create_single_lmdbs():
     for image_id in index:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
-        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,True,False)
+        #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,True,False)
         copy_file('solver.prototxt', lmdb_dir)
         copy_file('train_val.prototxt', lmdb_dir)
         copy_file('deploy.prototxt', lmdb_dir)
         copy_file('labels.txt', lmdb_dir)
         print 'create single lmdb for ' + str(image_id)
-        shell_script = ''
+        shell_script = 'cd ' + lmdb_dir + '\n'
         shell_script += '/home/pkrush/caffe/build/tools/caffe '
         shell_script += 'train '
 
@@ -84,16 +84,17 @@ def create_test_lmdbs():
 
     shell_filenames = []
     index = get_index()
+
     for image_id in index:
-        shell_script = ''
+        shell_script = 'cd ' + train_dir + str(image_id) + '/\n'
         shell_script += '/home/pkrush/caffe/.build_release/examples/cpp_classification/classification.bin '
-        shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/deploy.prototxt '
-        shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/snapshot_iter_844.caffemodel '
-        shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/mean.binaryproto '
-        shell_script += '/home/pkrush/lmdb-files/train/' + str(image_id) + '/labels.txt '
-        shell_script += '/home/pkrush/lmdb-files/test/0/train_db/data.mdb '
-        shell_script += '> ' + lmdb_dir + str(image_id) + '.dat \n'
-        shell_filename = lmdb_dir + 'test-' + str(image_id) + '.sh'
+        shell_script += 'deploy.prototxt '
+        shell_script += 'snapshot_iter_844.caffemodel '
+        shell_script += 'mean.binaryproto '
+        shell_script += 'labels.txt '
+        shell_script += test_dir + '0/train_db/data.mdb '
+        shell_script += '> ' + test_dir + '0/' + str(image_id) + '.dat\n'
+        shell_filename = test_dir + '0/test-' + str(image_id) + '.sh'
         shell_filenames.append(shell_filename)
         create_shell_script(shell_filename, shell_script)
 
@@ -121,7 +122,6 @@ def read_test():
     for image_id in index:
         filename = test_dir + '0/' + str(image_id) + '.dat'
         summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
-
 
 ###Instructions:
 #create_index()

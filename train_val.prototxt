@@ -8,10 +8,10 @@ layer {
   }
   transform_param {
     scale: 0.0125
-    mean_file: "mean.binaryproto"
+    mean_file: "replace_dir_name_mean.binaryproto"
   }
   data_param {
-    source: "train_db"
+    source: "replace_dir_name_train_db"
     batch_size: 64
     backend: LMDB
   }
@@ -26,10 +26,10 @@ layer {
   }
   transform_param {
     scale: 0.0125
-    mean_file: "mean.binaryproto"
+    mean_file: "replace_dir_name_mean.binaryproto"
   }
   data_param {
-    source: "val_db"
+    source: "replace_dir_name_val_db"
     batch_size: 32
     backend: LMDB
   }
