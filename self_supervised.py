@@ -74,13 +74,13 @@ def create_single_lmdbs():
     create_script_calling_script(train_dir + 'train_all', shell_filenames)
 
 def create_test_lmdbs():
-    index = [x for x in range(100)]
+    index = [x for x in range(1000)]
     filedata = []
     lmdb_dir = test_dir + str(0) + '/'
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
-    #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
 
     shell_filenames = []
     index = get_index()
@@ -127,5 +127,5 @@ def read_test():
 #create_index()
 #create_single_lmdbs()
 #in the train dir run ./train-single-coin-lmdbs.sh
-create_test_lmdbs()#in the test dir run ./test-1221.sh
-#read_test()
+#create_test_lmdbs()#in the test dir run ./test-1221.sh
+read_test()
