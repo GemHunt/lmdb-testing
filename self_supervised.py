@@ -8,8 +8,11 @@ import glob
 import os
 import create_lmdb_rotate_whole_image
 import summarize_whole_rotated_model_results
+import caffe_image as ci
 import shutil
 import sys
+import cv2
+
 
 home_dir = '/home/pkrush/lmdb-files/'
 data_dir = home_dir + 'metadata/'
@@ -74,13 +77,13 @@ def create_single_lmdbs():
     create_script_calling_script(train_dir + 'train_all', shell_filenames)
 
 def create_test_lmdbs():
-    index = [x for x in range(1000)]
+    index = [x for x in range(360)]
     filedata = []
     lmdb_dir = test_dir + str(0) + '/'
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 10,False,False)
+    #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 3,False,False)
 
     shell_filenames = []
     index = get_index()
@@ -94,6 +97,7 @@ def create_test_lmdbs():
         shell_script += 'labels.txt '
         shell_script += test_dir + '0/train_db/data.mdb '
         shell_script += '> ' + test_dir + '0/' + str(image_id) + '.dat\n'
+        shell_script += 'echo ' + str(image_id) + '\n'
         shell_filename = test_dir + '0/test-' + str(image_id) + '.sh'
         shell_filenames.append(shell_filename)
         create_shell_script(shell_filename, shell_script)
@@ -114,18 +118,38 @@ def create_script_calling_script(filename,shell_filenames):
     shell_script = ''
     for shell_filename in shell_filenames:
         shell_script += shell_filename + '\n'
-
     create_shell_script(filename, shell_script)
 
+
 def read_test():
-    index = get_index()
-    for image_id in index:
-        filename = test_dir + '0/' + str(image_id) + '.dat'
-        summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+    #index = get_index()
+    #for image_id in index:
+    image_id = 2917
+    filename = test_dir + '0/' + str(image_id) + '.dat'
+    results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+    images = []
+    square_size = 5
+    for count in range(0,square_size * square_size):
+        if count +2 > len(results):
+            break
+        print len(results) ,count
+        crop_id = results[count + 1][0]
+        angle =  results[count + 1][1]
+        print angle
+        if count == 0:
+            crop_id = image_id
+        crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
+        crop = cv2.resize(crop, (100, 100), interpolation=cv2.INTER_AREA)
+        M = cv2.getRotationMatrix2D((50, 50), angle, 1)
+        cv2.warpAffine(crop, M, (50, 50), crop, cv2.INTER_CUBIC)
+        images.append(crop)
+    composite_image = ci.get_composite_image(images,square_size)
+    cv2.imwrite(test_dir  + '0/' + str(image_id) + '.png',composite_image)
 
 ###Instructions:
 #create_index()
 #create_single_lmdbs()
-#in the train dir run ./train-single-coin-lmdbs.sh
-#create_test_lmdbs()#in the test dir run ./test-1221.sh
+#in the train dir run ./train_all.sh
+#create_test_lmdbs()
+#in the test dir run ./test_all
 read_test()

@@ -96,6 +96,7 @@ def summarize_whole_rotated_model_results(filename):
     sorted_results  = sorted(results, key=lambda result: result[1],reverse = True)
     index = 0
     filenames = []
+    filtered_results = []
     for key,max_value,angle,total_value in sorted_results:
         filename = '/home/pkrush/lmdb-files/crops/' + str(key) + '.jpg'
         #img = cv2.imread(filename)
@@ -108,16 +109,18 @@ def summarize_whole_rotated_model_results(filename):
         print filename, index, max_value,angle,total_value
         filenames.append([filename,angle])
         #cv2.waitKey(0)
-        if index >= 100:
-            break
+        if (angle < 30) or (angle > 330):
+            filtered_results.append([key,angle,max_value])
+    return filtered_results
+
 
     #self_supervised_whole_rotated_crops.create_lmdbs(filenames,True)
 
 
     print 'Done 7 %s seconds' % (time.time() - start_time,)
 
-    sys.exit()
 
+ss= '''
 
     #for index, row in df.iterrows():
     #    angle = int(row['ground_truth']) - (1000-int(row['prediction']))
@@ -177,3 +180,4 @@ def summarize_whole_rotated_model_results(filename):
     print 'Done after %s seconds' % (time.time() - start_time,)
 
 
+'''

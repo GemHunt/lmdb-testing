@@ -146,3 +146,15 @@ def get_angle_sequence(image_id,length):
     angles.sort()
     return angles
 
+
+def get_composite_image(images,square_size):
+    rows, cols, channels = images[0].shape
+    composite_rows = rows * square_size
+    composite_cols = cols * square_size
+    composite_image = np.zeros((composite_rows,composite_cols,3), np.uint8)
+    key = 0
+    for x in range(0,square_size):
+        for y in range(0, square_size):
+            composite_image[y*rows:((y+1)*rows), x*cols:((x+1)*cols)] = images[key]
+            key += 1
+    return composite_image
