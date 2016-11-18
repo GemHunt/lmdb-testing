@@ -123,24 +123,22 @@ def create_script_calling_script(filename,shell_filenames):
 
 def read_test():
     index = get_index()
+    all_results = []
     for image_id in index:
-    #image_id = 2917
         filename = test_dir + '0/' + str(image_id) + '.dat'
-        results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+        results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id)
+        all_results.append(results )
         images = []
         square_size = 5
         for count in range(0,square_size * square_size):
             if count +2 > len(results):
                 break
-            print len(results) ,count
             if count == 0:
                 angle = 0
                 crop_id = image_id
             else:
-                crop_id = results[count - 1][0]
-                angle = results[count - 1][1]
-
-            print angle
+                crop_id = results[count - 1][1]
+                angle = results[count - 1][2]
 
             crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
             crop = cv2.resize(crop, (100, 100), interpolation=cv2.INTER_AREA)
@@ -149,6 +147,15 @@ def read_test():
             images.append(crop)
         composite_image = ci.get_composite_image(images,square_size)
         cv2.imwrite(test_dir  + '0/' + str(image_id) + '.png',composite_image)
+    pickle.dump(all_results, open(test_dir + '0/all_results.pickle', "wb"))
+
+
+def read_all_results():
+    all_results = pickle.load( open(test_dir + '0/all_results.pickle' , "rb" ) )
+    #idx = all_results.groupby(['index_id'])['max_value'].transform(max) == all_results['max_value']
+    #print all_results[idx]
+    print all_results
+
 
 ###Instructions:
 #create_index()
@@ -156,4 +163,6 @@ def read_test():
 #in the train dir run ./train_all.sh
 #create_test_lmdbs()
 #in the test dir run ./test_all
-read_test()
+#read_test()
+read_all_results()
+
