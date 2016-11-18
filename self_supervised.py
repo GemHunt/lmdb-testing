@@ -9,6 +9,7 @@ import os
 import create_lmdb_rotate_whole_image
 import summarize_whole_rotated_model_results
 import caffe_image as ci
+import pandas as pd
 import shutil
 import sys
 import cv2
@@ -152,9 +153,18 @@ def read_test():
 
 def read_all_results():
     all_results = pickle.load( open(test_dir + '0/all_results.pickle' , "rb" ) )
-    #idx = all_results.groupby(['index_id'])['max_value'].transform(max) == all_results['max_value']
-    #print all_results[idx]
-    print all_results
+    columns = ['seed_image_id','key','angle','max_value']
+    all = []
+
+    for results in all_results:
+        for  seed_image_id,key,angle,max_value in results:
+            all.append([seed_image_id,key,angle,max_value])
+
+    df = pd.DataFrame(data=all,columns = columns)
+
+    index = df.groupby(['key'], sort=True)['max_value'].max()
+    print index
+
 
 
 ###Instructions:
