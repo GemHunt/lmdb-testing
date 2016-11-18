@@ -122,29 +122,33 @@ def create_script_calling_script(filename,shell_filenames):
 
 
 def read_test():
-    #index = get_index()
-    #for image_id in index:
-    image_id = 2917
-    filename = test_dir + '0/' + str(image_id) + '.dat'
-    results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
-    images = []
-    square_size = 5
-    for count in range(0,square_size * square_size):
-        if count +2 > len(results):
-            break
-        print len(results) ,count
-        crop_id = results[count + 1][0]
-        angle =  results[count + 1][1]
-        print angle
-        if count == 0:
-            crop_id = image_id
-        crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
-        crop = cv2.resize(crop, (100, 100), interpolation=cv2.INTER_AREA)
-        M = cv2.getRotationMatrix2D((50, 50), angle, 1)
-        cv2.warpAffine(crop, M, (50, 50), crop, cv2.INTER_CUBIC)
-        images.append(crop)
-    composite_image = ci.get_composite_image(images,square_size)
-    cv2.imwrite(test_dir  + '0/' + str(image_id) + '.png',composite_image)
+    index = get_index()
+    for image_id in index:
+    #image_id = 2917
+        filename = test_dir + '0/' + str(image_id) + '.dat'
+        results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename)
+        images = []
+        square_size = 5
+        for count in range(0,square_size * square_size):
+            if count +2 > len(results):
+                break
+            print len(results) ,count
+            if count == 0:
+                angle = 0
+                crop_id = image_id
+            else:
+                crop_id = results[count - 1][0]
+                angle = results[count - 1][1]
+
+            print angle
+
+            crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
+            crop = cv2.resize(crop, (100, 100), interpolation=cv2.INTER_AREA)
+            M = cv2.getRotationMatrix2D((50, 50), angle, 1)
+            cv2.warpAffine(crop, M, (100, 100), crop, cv2.INTER_CUBIC)
+            images.append(crop)
+        composite_image = ci.get_composite_image(images,square_size)
+        cv2.imwrite(test_dir  + '0/' + str(image_id) + '.png',composite_image)
 
 ###Instructions:
 #create_index()
