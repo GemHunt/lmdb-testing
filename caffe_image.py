@@ -155,6 +155,8 @@ def get_composite_image(images,square_size):
     key = 0
     for x in range(0,square_size):
         for y in range(0, square_size):
+            if len(images) <= key:
+                break
             composite_image[y*rows:((y+1)*rows), x*cols:((x+1)*cols)] = images[key]
             key += 1
     return composite_image

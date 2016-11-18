@@ -156,15 +156,40 @@ def read_all_results():
     columns = ['seed_image_id','key','angle','max_value']
     all = []
 
+    crops = {}
+    seeds = {}
     for results in all_results:
         for  seed_image_id,key,angle,max_value in results:
             all.append([seed_image_id,key,angle,max_value])
+            if key in crops:
+                if crops[key][2] < max_value:
+                    crops[key] = [seed_image_id, angle, max_value]
+            else:
+                crops[key] = [seed_image_id,angle,max_value]
 
-    df = pd.DataFrame(data=all,columns = columns)
+    for key,values in crops.iteritems():
+        if not values[0] in seeds:
+            seeds[values[0]] = []
+        seeds[values[0]].append([values[2], values[1], key])
 
-    index = df.groupby(['key'], sort=True)['max_value'].max()
-    print index
+    for seed_image_id,values in seeds.iteritems():
+        values.sort(key=lambda x: x[0],reverse=True)
+        images = []
+        square_size = 5
+        count = 0
+        crop_size = 100
+        images.append(get_rotated_crop(seed_image_id,crop_size,0))
+        for max_value,angle,image_id in values:
+            images.append(get_rotated_crop(image_id, crop_size, angle))
+        composite_image = ci.get_composite_image(images, square_size)
+        cv2.imwrite(test_dir + '0/' + str(seed_image_id) + '.png', composite_image)
 
+def get_rotated_crop(crop_id,crop_size,angle):
+    crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
+    crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    M = cv2.getRotationMatrix2D((crop_size/2, crop_size/2), angle, 1)
+    cv2.warpAffine(crop, M, (crop_size, crop_size), crop, cv2.INTER_CUBIC)
+    return crop
 
 
 ###Instructions:
