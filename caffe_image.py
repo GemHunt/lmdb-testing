@@ -55,6 +55,14 @@ def rotate(img, angle,center_x,center_y,rows,cols):
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img
 
+
+def get_rotated_crop(crop_dir, crop_id, crop_size, angle):
+    crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
+    crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
+    M = cv2.getRotationMatrix2D((crop_size / 2, crop_size / 2), angle, 1)
+    cv2.warpAffine(crop, M, (crop_size, crop_size), crop, cv2.INTER_CUBIC)
+    return crop
+
 def rotate_point(angle, center_x,center_y,point_x,point_y):
     rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
     rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y;
@@ -142,7 +150,13 @@ def get_angle_sequence(image_id,length):
         class_angle = int(round(angle))
         if class_angle == 360:
             class_angle = 0
-        angles.append([random.random(), angle, class_angle])
+
+        if class_angle < 30:
+            angles.append([random.random(), angle, class_angle])
+
+        if class_angle > 330:
+            angles.append([random.random(), angle, class_angle])
+
     angles.sort()
     return angles
 
@@ -157,6 +171,6 @@ def get_composite_image(images,square_size):
         for y in range(0, square_size):
             if len(images) <= key:
                 break
-            composite_image[y*rows:((y+1)*rows), x*cols:((x+1)*cols)] = images[key]
+            composite_image[x*rows:((x+1)*rows), y*cols:((y+1)*cols)] = images[key]
             key += 1
     return composite_image

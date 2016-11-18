@@ -14,7 +14,6 @@ import shutil
 import sys
 import cv2
 
-
 home_dir = '/home/pkrush/lmdb-files/'
 data_dir = home_dir + 'metadata/'
 crop_dir = home_dir + 'crops/'
@@ -24,25 +23,28 @@ index_filename = data_dir + 'index.p'
 
 
 def create_index():
-    index = [random.randint(1000, 13828) for x in range(25)]
-    pickle.dump(index, open(index_filename , "wb") )
+    index = [random.randint(4000, 13828) for x in range(250)]
+    pickle.dump(index, open(index_filename, "wb"))
+
 
 def get_index():
-    index = pickle.load( open(index_filename , "rb" ) )
+    index = pickle.load(open(index_filename, "rb"))
     return sorted(index)
+
 
 def rename_crops():
     crops = []
     for filename in glob.iglob(crop_dir + '*.jpg'):
-        crops.append([random.random(),filename])
+        crops.append([random.random(), filename])
     crops.sort()
     pickle.dump(crops, open(data_dir + 'copper_crops.p', "wb"))
     key = 0
-    for rand,filename in crops:
+    for rand, filename in crops:
         key += 1
         os.rename(filename, crop_dir + str(key) + '.jpg')
 
-def copy_file(filename,dir):
+
+def copy_file(filename, dir):
     with open(filename, 'r') as myfile:
         data = myfile.read().replace('replace_dir_name_', dir)
     with open(dir + filename, 'w') as file_:
@@ -57,7 +59,7 @@ def create_single_lmdbs():
     for image_id in index:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
-        #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,True,False)
+        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100, True, False)
         copy_file('solver.prototxt', lmdb_dir)
         copy_file('train_val.prototxt', lmdb_dir)
         copy_file('deploy.prototxt', lmdb_dir)
@@ -70,21 +72,22 @@ def create_single_lmdbs():
         shell_script += '-solver ' + lmdb_dir + 'solver.prototxt '
         shell_script += '-weights ' + train_dir + weight_filename + ' '
         shell_script += '2> ' + lmdb_dir + 'caffe_output.log \n'
-
+        shell_script += 'echo ' + str(image_id) + '\n'
         shell_filename = lmdb_dir + 'train-single-coin-lmdbs.sh'
         shell_filenames.append(shell_filename)
         create_shell_script(shell_filename, shell_script)
 
     create_script_calling_script(train_dir + 'train_all', shell_filenames)
 
+
 def create_test_lmdbs():
-    index = [x for x in range(360)]
+    index = [x for x in range(4000)]
     filedata = []
     lmdb_dir = test_dir + str(0) + '/'
     for image_id in index:
         filedata.append([image_id, crop_dir + str(image_id) + '.jpg', 0])
 
-    #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 3,False,False)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 3, False, False)
 
     shell_filenames = []
     index = get_index()
@@ -106,7 +109,7 @@ def create_test_lmdbs():
     create_script_calling_script(test_dir + 'test_all', shell_filenames)
 
 
-def create_shell_script(filename,shell_script):
+def create_shell_script(filename, shell_script):
     shell_script = '#!/bin/bash\n' + shell_script
     with open(filename, 'w') as file_:
         file_.write(shell_script)
@@ -115,7 +118,8 @@ def create_shell_script(filename,shell_script):
     os.fchmod(fd, 0755)
     os.close(fd)
 
-def create_script_calling_script(filename,shell_filenames):
+
+def create_script_calling_script(filename, shell_filenames):
     shell_script = ''
     for shell_filename in shell_filenames:
         shell_script += shell_filename + '\n'
@@ -127,12 +131,14 @@ def read_test():
     all_results = []
     for image_id in index:
         filename = test_dir + '0/' + str(image_id) + '.dat'
+        if not os.path.isfile(filename):
+            continue
         results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id)
-        all_results.append(results )
+        all_results.append(results)
         images = []
         square_size = 5
-        for count in range(0,square_size * square_size):
-            if count +2 > len(results):
+        for count in range(0, square_size * square_size):
+            if count + 2 > len(results):
                 break
             if count == 0:
                 angle = 0
@@ -146,58 +152,53 @@ def read_test():
             M = cv2.getRotationMatrix2D((50, 50), angle, 1)
             cv2.warpAffine(crop, M, (100, 100), crop, cv2.INTER_CUBIC)
             images.append(crop)
-        composite_image = ci.get_composite_image(images,square_size)
-        cv2.imwrite(test_dir  + '0/' + str(image_id) + '.png',composite_image)
+        composite_image = ci.get_composite_image(images, square_size)
+        cv2.imwrite(test_dir + '0/' + str(image_id) + '.png', composite_image)
     pickle.dump(all_results, open(test_dir + '0/all_results.pickle', "wb"))
 
 
 def read_all_results():
-    all_results = pickle.load( open(test_dir + '0/all_results.pickle' , "rb" ) )
-    columns = ['seed_image_id','key','angle','max_value']
+    all_results = pickle.load(open(test_dir + '0/all_results.pickle', "rb"))
+    columns = ['seed_image_id', 'key', 'angle', 'max_value']
     all = []
 
     crops = {}
     seeds = {}
     for results in all_results:
-        for  seed_image_id,key,angle,max_value in results:
-            all.append([seed_image_id,key,angle,max_value])
+        for seed_image_id, key, angle, max_value in results:
+            all.append([seed_image_id, key, angle, max_value])
             if key in crops:
                 if crops[key][2] < max_value:
                     crops[key] = [seed_image_id, angle, max_value]
             else:
-                crops[key] = [seed_image_id,angle,max_value]
+                crops[key] = [seed_image_id, angle, max_value]
 
-    for key,values in crops.iteritems():
+    for key, values in crops.iteritems():
         if not values[0] in seeds:
             seeds[values[0]] = []
         seeds[values[0]].append([values[2], values[1], key])
 
-    for seed_image_id,values in seeds.iteritems():
-        values.sort(key=lambda x: x[0],reverse=True)
+    for seed_image_id, values in seeds.iteritems():
+        values.sort(key=lambda x: x[0], reverse=True)
         images = []
-        square_size = 5
+        square_size = 6
         count = 0
-        crop_size = 100
-        images.append(get_rotated_crop(seed_image_id,crop_size,0))
-        for max_value,angle,image_id in values:
-            images.append(get_rotated_crop(image_id, crop_size, angle))
+        crop_size = 120
+        images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
+        for max_value, angle, image_id in values:
+            crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
+            images.append(crop)
         composite_image = ci.get_composite_image(images, square_size)
         cv2.imwrite(test_dir + '0/' + str(seed_image_id) + '.png', composite_image)
 
-def get_rotated_crop(crop_id,crop_size,angle):
-    crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
-    crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
-    M = cv2.getRotationMatrix2D((crop_size/2, crop_size/2), angle, 1)
-    cv2.warpAffine(crop, M, (crop_size, crop_size), crop, cv2.INTER_CUBIC)
-    return crop
 
-
-###Instructions:
-#create_index()
-#create_single_lmdbs()
-#in the train dir run ./train_all.sh
-#create_test_lmdbs()
-#in the test dir run ./test_all
-#read_test()
+#Instructions:
+# create_index()
+# create_single_lmdbs()
+# in the train dir run ./train_all.sh
+# create_test_lmdbs()
+# in the test dir run ./test_all
+# read_test()
 read_all_results()
-

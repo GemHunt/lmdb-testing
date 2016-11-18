@@ -110,13 +110,11 @@ def summarize_whole_rotated_model_results(filename,seed_image_id):
         #cv2.waitKey(0)
         if (angle < 30) or (angle > 330):
             filtered_results.append([seed_image_id,key,angle,max_value])
+
+    print str(seed_image_id) + 'Done %s seconds' % (time.time() - start_time,)
     return filtered_results
 
-
     #self_supervised_whole_rotated_crops.create_lmdbs(filenames,True)
-
-
-    print 'Done 7 %s seconds' % (time.time() - start_time,)
 
 
 ss= '''
