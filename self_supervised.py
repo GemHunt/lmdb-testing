@@ -51,8 +51,7 @@ def copy_file(filename, dir):
         file_.write(data)
 
 
-def create_single_lmdbs():
-    index = get_index()
+def create_single_lmdbs(index):
     weight_filename = 'starting-weights.caffemodel'
     shutil.copyfile(weight_filename, train_dir + weight_filename)
     shell_filenames = []
@@ -60,25 +59,50 @@ def create_single_lmdbs():
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
         create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100, True, False)
-        copy_file('solver.prototxt', lmdb_dir)
-        copy_file('train_val.prototxt', lmdb_dir)
-        copy_file('deploy.prototxt', lmdb_dir)
-        copy_file('labels.txt', lmdb_dir)
         print 'create single lmdb for ' + str(image_id)
-        shell_script = 'cd ' + lmdb_dir + '\n'
-        shell_script += '/home/pkrush/caffe/build/tools/caffe '
-        shell_script += 'train '
-
-        shell_script += '-solver ' + lmdb_dir + 'solver.prototxt '
-        shell_script += '-weights ' + train_dir + weight_filename + ' '
-        shell_script += '2> ' + lmdb_dir + 'caffe_output.log \n'
-        shell_script += 'echo ' + str(image_id) + '\n'
-        shell_filename = lmdb_dir + 'train-single-coin-lmdbs.sh'
+        copy_train_files(lmdb_dir)
+        shell_filename = create_train_script(image_id,lmdb_dir,train_dir + weight_filename)
         shell_filenames.append(shell_filename)
-        create_shell_script(shell_filename, shell_script)
-
     create_script_calling_script(train_dir + 'train_all', shell_filenames)
 
+def copy_train_files(lmdb_dir):
+    copy_file('solver.prototxt', lmdb_dir)
+    copy_file('train_val.prototxt', lmdb_dir)
+    copy_file('deploy.prototxt', lmdb_dir)
+    copy_file('labels.txt', lmdb_dir)
+
+
+def create_train_script(image_id,lmdb_dir,weight_filename):
+    shell_script = 'cd ' + lmdb_dir + '\n'
+    shell_script += '/home/pkrush/caffe/build/tools/caffe '
+    shell_script += 'train '
+
+    shell_script += '-solver ' + lmdb_dir + 'solver.prototxt '
+    shell_script += '-weights ' + weight_filename + ' '
+    shell_script += '2> ' + lmdb_dir + 'caffe_output.log \n'
+    shell_script += 'echo ' + str(image_id) + '\n'
+    shell_filename = lmdb_dir + 'train-single-coin-lmdbs.sh'
+    create_shell_script(shell_filename, shell_script)
+    return shell_filename
+
+
+def create_single_lmdb(seed_id):
+    weight_filename = train_dir + str(seed_id) + '/' + 'snapshot_iter_844.caffemodel'
+    weight_filename_copy = train_dir + 'snapshot_iter_844.caffemodel'
+    shutil.copyfile(weight_filename, weight_filename_copy)
+    #weight_filename_copy = 'snapshot_iter_844.caffemodel'
+
+    seeds = pickle.load(open(test_dir + '0/seed_data.pickle', "rb"))
+    filedata = []
+    values = seeds[seed_id]
+    values.sort(key=lambda x: x[0], reverse=True)
+    filedata.append([seed_id, crop_dir + str(seed_id) + '.jpg', 0])
+    for max_value, angle, image_id in values:
+        filedata.append([image_id, crop_dir + str(image_id) + '.jpg', angle])
+    lmdb_dir = train_dir + str(seed_id) + '/'
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 50, True, False)
+    copy_train_files(lmdb_dir)
+    create_train_script(seed_id, lmdb_dir, weight_filename_copy)
 
 def create_test_lmdbs():
     index = [x for x in range(4000)]
@@ -103,11 +127,9 @@ def create_test_lmdbs():
         shell_script += '> ' + test_dir + '0/' + str(image_id) + '.dat\n'
         shell_script += 'echo ' + str(image_id) + '\n'
         shell_filename = test_dir + '0/test-' + str(image_id) + '.sh'
-        shell_filenames.append(shell_filename)
         create_shell_script(shell_filename, shell_script)
-
+        shell_filenames.append(shell_filename)
     create_script_calling_script(test_dir + 'test_all', shell_filenames)
-
 
 def create_shell_script(filename, shell_script):
     shell_script = '#!/bin/bash\n' + shell_script
@@ -126,47 +148,26 @@ def create_script_calling_script(filename, shell_filenames):
     create_shell_script(filename, shell_script)
 
 
-def read_test():
-    index = get_index()
-    all_results = []
+def read_test(index):
+    all_results  = pickle.load(open(test_dir + '0/all_results.pickle', "rb"))
     for image_id in index:
         filename = test_dir + '0/' + str(image_id) + '.dat'
         if not os.path.isfile(filename):
             continue
         results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id)
         all_results.append(results)
-        images = []
-        square_size = 5
-        for count in range(0, square_size * square_size):
-            if count + 2 > len(results):
-                break
-            if count == 0:
-                angle = 0
-                crop_id = image_id
-            else:
-                crop_id = results[count - 1][1]
-                angle = results[count - 1][2]
-
-            crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
-            crop = cv2.resize(crop, (100, 100), interpolation=cv2.INTER_AREA)
-            M = cv2.getRotationMatrix2D((50, 50), angle, 1)
-            cv2.warpAffine(crop, M, (100, 100), crop, cv2.INTER_CUBIC)
-            images.append(crop)
-        composite_image = ci.get_composite_image(images, square_size)
-        cv2.imwrite(test_dir + '0/' + str(image_id) + '.png', composite_image)
     pickle.dump(all_results, open(test_dir + '0/all_results.pickle', "wb"))
 
 
 def read_all_results():
     all_results = pickle.load(open(test_dir + '0/all_results.pickle', "rb"))
-    columns = ['seed_image_id', 'key', 'angle', 'max_value']
-    all = []
-
+    #columns = ['seed_image_id', 'key', 'angle', 'max_value']
     crops = {}
     seeds = {}
     for results in all_results:
         for seed_image_id, key, angle, max_value in results:
-            all.append([seed_image_id, key, angle, max_value])
+            if max_value < 20:
+                continue
             if key in crops:
                 if crops[key][2] < max_value:
                     crops[key] = [seed_image_id, angle, max_value]
@@ -181,9 +182,9 @@ def read_all_results():
     for seed_image_id, values in seeds.iteritems():
         values.sort(key=lambda x: x[0], reverse=True)
         images = []
-        square_size = 6
+        square_size = 20
         count = 0
-        crop_size = 120
+        crop_size = 60
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
         for max_value, angle, image_id in values:
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
@@ -193,12 +194,23 @@ def read_all_results():
         composite_image = ci.get_composite_image(images, square_size)
         cv2.imwrite(test_dir + '0/' + str(seed_image_id) + '.png', composite_image)
 
+    pickle.dump(seeds, open(test_dir + '0/seed_data.pickle', "wb"))
 
 #Instructions:
 # create_index()
-# create_single_lmdbs()
+# create_single_lmdbs(get_index())
 # in the train dir run ./train_all.sh
-# create_test_lmdbs()
+create_test_lmdbs()
 # in the test dir run ./test_all
-# read_test()
-read_all_results()
+#read_test(get_index())
+#read_all_results()
+
+#Single ReTrain & Test:
+#create_single_lmdb(13735)
+# in the train dir ./train-single-coin-lmdbs.sh
+# in the test dir run ./test-12004.sh
+#read_test([13735])
+#in the test dir rm *.png
+#read_all_results()
+
+

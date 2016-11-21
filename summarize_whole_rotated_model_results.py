@@ -46,14 +46,14 @@ def summarize_whole_rotated_model_results(filename,seed_image_id):
     #df = pd.concat([df_plus,df_neg])
 
     result_totals = df.groupby('prediction')['result'].sum().values
-    correction  = result_totals / (result_totals.sum() / 360)
+    #correction  = result_totals / (result_totals.sum() / 360)
     keys = df.key.unique()
     results = []
 
-    for count in range(0, 360):
-        if correction[count] < .5:
-            correction[count] = .5
-        correction[count] = 1 / correction[count]
+    #for count in range(0, 360):
+    #    if correction[count] < .5:
+    #        correction[count] = .5
+    #    correction[count] = 1 / correction[count]
 
     print 'Done 2.5 %s seconds' % (time.time() - start_time,)
 
@@ -75,7 +75,7 @@ def summarize_whole_rotated_model_results(filename,seed_image_id):
         result_totals = result_totals + full_index
         #print 'Done 5 %s seconds' % (time.time() - start_time,)
 
-        result_totals = result_totals * correction
+        #result_totals = result_totals * correction
         #print 'Done 6 %s seconds' % (time.time() - start_time,)
 
         #plt.title(key)
