@@ -1,12 +1,5 @@
-from pandas import Series, DataFrame
 import pandas as pd
 import time
-#import matplotlib.pyplot as plt
-import numpy as np
-import sys
-import cv2
-import caffe_image as ci
-#import self_supervised_whole_rotated_crops as self_supervised_whole_rotated_crops
 
 def get_results(filename,seed_image_id,low_angle,high_angle):
 
@@ -33,5 +26,5 @@ def get_results(filename,seed_image_id,low_angle,high_angle):
         if (angle < low_angle) or (angle > high_angle):
             filtered_results.append([seed_image_id,image_id,int(angle), max_value])
 
-    print str(seed_image_id) + ' done in %s seconds' % (time.time() - start_time,)
+    print str(seed_image_id) + ' done in %s seconds' % (time.time() - start_time)
     return filtered_results
