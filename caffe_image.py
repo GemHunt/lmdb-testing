@@ -138,7 +138,7 @@ def get_caffe_image(crop, crop_size):
     caffe_images = [caffe_image]
     return caffe_images
 
-def get_angle_sequence(image_id,length):
+def get_angle_sequence(image_id,length,test_id):
     '''
     Gets a repeatable sequence of random angles based on using the image_id as the seed.
     (a hack for now because I can't read the label on the back end yet.)
@@ -151,11 +151,44 @@ def get_angle_sequence(image_id,length):
         if class_angle == 360:
             class_angle = 0
 
-        if class_angle < 30:
+        if test_id == -1:
             angles.append([random.random(), angle, class_angle])
 
-        if class_angle > 330:
-            angles.append([random.random(), angle, class_angle])
+        if test_id == 0:
+            if 0 <= class_angle < 30:
+                angles.append([random.random(), angle, class_angle])
+            if 330 <= class_angle < 360:
+                angles.append([random.random(), angle, class_angle])
+        if class_angle == 50:
+            pass
+
+        if test_id == 1:
+            if 30 <= class_angle < 60:
+                angles.append([random.random(), angle, class_angle])
+            if 300 <= class_angle < 330:
+                angles.append([random.random(), angle, class_angle])
+
+        if test_id == 2:
+            if 60 <= class_angle < 90:
+                angles.append([random.random(), angle, class_angle])
+            if 270 <= class_angle < 300:
+                angles.append([random.random(), angle, class_angle])
+
+        if test_id == 3:
+            if 90 <= class_angle < 120:
+                angles.append([random.random(), angle, class_angle])
+            if 240 <= class_angle < 270:
+                angles.append([random.random(), angle, class_angle])
+
+        if test_id == 4:
+            if 120 <= class_angle < 150:
+                angles.append([random.random(), angle, class_angle])
+            if 210 <= class_angle < 240:
+                angles.append([random.random(), angle, class_angle])
+
+        if test_id == 5:
+            if 150 <= class_angle < 210:
+                angles.append([random.random(), angle, class_angle])
 
     angles.sort()
     return angles

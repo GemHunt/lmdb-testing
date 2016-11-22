@@ -32,7 +32,7 @@ from digits import utils
 import caffe.io
 from caffe.proto import caffe_pb2
 
-def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, create_files = False):
+def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = True, create_files = False):
     start_time = time.time()
 
     max_images = 9999
@@ -95,7 +95,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle, create_val_set = True, cr
             if train_vs_val == 4:
                 phase = 'val'
         key = 0
-        angles = ci.get_angle_sequence(image_id , images_per_angle * 360)
+        angles = ci.get_angle_sequence(image_id , images_per_angle * 360,test_id)
 
         for random_float,angle, class_angle in angles:
             angle_to_rotate = angle + angle_offset

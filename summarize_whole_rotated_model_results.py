@@ -8,7 +8,7 @@ import cv2
 import caffe_image as ci
 #import self_supervised_whole_rotated_crops as self_supervised_whole_rotated_crops
 
-def summarize_whole_rotated_model_results(filename,seed_image_id):
+def summarize_whole_rotated_model_results(filename,seed_image_id,low_angle,high_angle):
 
     #angle_offset = 170
     angle_offset = 35
@@ -108,7 +108,7 @@ def summarize_whole_rotated_model_results(filename,seed_image_id):
         index += 1
         filenames.append([filename,angle])
         #cv2.waitKey(0)
-        if (angle < 30) or (angle > 330):
+        if (angle < low_angle) or (angle > high_angle):
             filtered_results.append([seed_image_id,key,angle,max_value])
 
     print str(seed_image_id) + 'Done %s seconds' % (time.time() - start_time,)

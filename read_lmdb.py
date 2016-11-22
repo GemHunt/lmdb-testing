@@ -46,5 +46,4 @@ def get_batch():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-
 get_batch()
