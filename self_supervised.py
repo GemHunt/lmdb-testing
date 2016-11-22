@@ -8,6 +8,7 @@ import glob
 import os
 import create_lmdb_rotate_whole_image
 import summarize_whole_rotated_model_results
+import summarize_rotated_crops
 import caffe_image as ci
 import pandas as pd
 import shutil
@@ -158,14 +159,13 @@ def read_test(index,test_id,low_angle,high_angle):
                 new_all_results.append(results)
 
     for test in range(0,test_id + 1):
-        print test
         for image_id in index:
             filename = test_dir + str(test) + '/' + str(image_id) + '.dat'
 
             if not os.path.isfile(filename):
                 continue
-            print filename
-            results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id,low_angle,high_angle)
+            results = summarize_rotated_crops.get_results(filename, image_id,low_angle,high_angle)
+            #results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id,low_angle,high_angle)
             new_all_results.append(results)
     pickle.dump(new_all_results, open(data_dir + 'all_results.pickle', "wb"))
 
@@ -191,18 +191,17 @@ def read_all_results(cut_off):
         seeds[values[0]].append([values[2], values[1], key])
 
     for seed_image_id, values in seeds.iteritems():
-        values.sort(key=lambda x: x[0], reverse=True)
+        values.sort(key=lambda x: x[0], reverse=False)
         images = []
-        square_size = 6
         count = 0
-        crop_size = 120
+        crop_size = 100
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
         for max_value, angle, image_id in values:
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
             images.append(crop)
-        composite_image = ci.get_composite_image(images, square_size)
+        composite_image = ci.get_composite_image(images,10,8)
         cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
 
     pickle.dump(seeds, open(data_dir + 'seed_data.pickle', "wb"))
@@ -215,6 +214,7 @@ def read_all_results(cut_off):
 # in the test dir run ./test_all
 #read_test(get_index())
 #read_all_results()
+
 
 #Single ReTrain & Test:
 #create_single_lmdb(12004)

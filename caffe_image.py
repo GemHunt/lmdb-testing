@@ -194,16 +194,16 @@ def get_angle_sequence(image_id,length,test_id):
     return angles
 
 
-def get_composite_image(images,square_size):
-    rows, cols, channels = images[0].shape
-    composite_rows = rows * square_size
-    composite_cols = cols * square_size
+def get_composite_image(images,cols,rows):
+    crop_rows, crop_cols, channels = images[0].shape
+    composite_rows = crop_rows * rows
+    composite_cols = crop_cols * cols
     composite_image = np.zeros((composite_rows,composite_cols,3), np.uint8)
     key = 0
-    for x in range(0,square_size):
-        for y in range(0, square_size):
+    for x in range(0,rows):
+        for y in range(0, cols):
             if len(images) <= key:
                 break
-            composite_image[x*rows:((x+1)*rows), y*cols:((y+1)*cols)] = images[key]
+            composite_image[x*crop_rows:((x+1)*crop_rows), y*crop_cols:((y+1)*crop_cols)] = images[key]
             key += 1
     return composite_image
