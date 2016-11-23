@@ -26,5 +26,5 @@ def get_results(filename,seed_image_id,low_angle,high_angle):
         if (angle < low_angle) or (angle > high_angle):
             filtered_results.append([seed_image_id,image_id,int(angle), max_value])
 
-    print 'Done reading results, with slow python, for ' + str(seed_image_id) + ' in %s seconds' % (time.time() - start_time)
+    print 'Done reading results, with slow python, for seed image ID:' + str(seed_image_id) + ' in %s seconds' % (time.time() - start_time)
     return filtered_results
