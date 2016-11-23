@@ -90,9 +90,9 @@ def create_train_script(image_id,lmdb_dir,weight_filename):
 
 def create_single_lmdb(seed_id):
     start_time = time.time()
-    #weight_filename = train_dir + str(seed_id) + '/' + 'snapshot_iter_844.caffemodel'
+    weight_filename = train_dir + str(seed_id) + '/' + 'snapshot_iter_844.caffemodel'
     weight_filename_copy = train_dir + 'snapshot_iter_844.caffemodel'
-    #shutil.copyfile(weight_filename, weight_filename_copy)
+    shutil.copyfile(weight_filename, weight_filename_copy)
     #weight_filename_copy = 'snapshot_iter_844.caffemodel'
 
     seeds = pickle.load(open(data_dir + 'seed_data.pickle', "rb"))
@@ -190,13 +190,15 @@ def read_test(index,test_id,low_angle,high_angle):
             new_all_results.append(results)
     pickle.dump(new_all_results, open(data_dir + 'all_results.pickle', "wb"))
 
-def read_all_results(cut_off):
+def read_all_results(cut_off,seed_image_ids = []):
     all_results = pickle.load(open(data_dir + 'all_results.pickle', "rb"))
     #columns = ['seed_image_id', 'key', 'angle', 'max_value']
     crops = {}
     seeds = {}
     for results in all_results:
         for seed_image_id, key, angle, max_value in results:
+            if len(seed_image_ids) != 0 and seed_image_id not in seed_image_ids:
+                continue
             if max_value < cut_off:
                 continue
             if key in crops:
@@ -211,7 +213,7 @@ def read_all_results(cut_off):
         seeds[values[0]].append([values[2], values[1], key])
 
     for seed_image_id, values in seeds.iteritems():
-        values.sort(key=lambda x: x[0], reverse=True)
+        values.sort(key=lambda x: x[0], reverse=False)
         images = []
         count = 0
         crop_size = 100
@@ -226,6 +228,18 @@ def read_all_results(cut_off):
 
     pickle.dump(seeds, open(data_dir + 'seed_data.pickle', "wb"))
 
+def widen_model(seed_image_id):
+    angles = {0: (30, 330), 1: (60, 300), 2: (90, 270), 3: (120, 240), 4: (150, 210), 5: (180, 180)}
+    for test_id in range(2,6):
+        create_single_lmdb(seed_image_id)
+        subprocess.call(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
+        #only needs to be called once per test grouping: #create_test_lmdbs(5)
+        subprocess.call(test_dir + str(test_id) + '/test-'+ str(seed_image_id) + '.sh')
+        low_angle, high_angle = angles[test_id]
+        read_test([seed_image_id],test_id,low_angle,high_angle)
+        #in the metadata dir rm *.png
+        read_all_results(0)
+
 #Instructions:
 # create_index()
 # create_single_lmdbs(get_index())
@@ -234,16 +248,6 @@ def read_all_results(cut_off):
 # in the test dir run ./test_all
 #read_test(get_index())
 #read_all_results()
+#widen_model(11458) #Change back to 1
 
-#Single ReTrain & Test:
-#seed_image_id = 12004
-#test_id = 5
-#create_single_lmdb(seed_image_id)
-#subprocess.call(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
-# only needs to be called once per test grouping: #create_test_lmdbs(5)
-#subprocess.call(test_dir + str(test_id) + '/test-'+ str(seed_image_id) + '.sh')
-#read_test([seed_image_id],test_id,180,180)
-#in the metadata dir rm *.png
-read_all_results(0)
-
-
+read_all_results(0,[11458,12004])
