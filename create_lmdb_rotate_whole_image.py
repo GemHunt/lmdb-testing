@@ -35,7 +35,7 @@ from caffe.proto import caffe_pb2
 def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = True, create_files = False):
     start_time = time.time()
 
-    max_images = 9999
+    max_images = 99999999
     crop_size = 28
     before_rotate_size = 100
     classes = 360
