@@ -29,7 +29,7 @@ import caffe.io
 from caffe.proto import caffe_pb2
 
 def get_whole_rotated_image(crop,mask,angle, crop_size):
-    before_rotate_size = 100
+    before_rotate_size = 40
     center_x = before_rotate_size/2 + (random.random() * 2) - 1
     center_y = before_rotate_size/2 + (random.random() * 2) - 1
 

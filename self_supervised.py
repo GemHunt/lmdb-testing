@@ -195,11 +195,11 @@ def read_test(image_ids, max_test_id):
             new_all_results.append(results)
     pickle.dump(new_all_results, open(data_dir + 'all_results.pickle', "wb"))
 
-def read_all_results(cut_off = 0,seed_image_ids = []):
+def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
     all_results = pickle.load(open(data_dir + 'all_results.pickle', "rb"))
     #columns = ['seed_image_id', 'key', 'angle', 'max_value']
-    image_ids_with_highest_max_value = {}
     seeds = {}
+    image_ids_with_highest_max_value = {}
 
     #This fills image_ids_with_highest_max_value:
     for results in all_results:
@@ -210,31 +210,45 @@ def read_all_results(cut_off = 0,seed_image_ids = []):
             # This optionally filters only the best results:
             if max_value < cut_off:
                 continue
+
             if image_id in image_ids_with_highest_max_value:
                 if image_ids_with_highest_max_value[image_id][2] < max_value:
                     image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
             else:
                 image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
 
-    #This fills seeds:
-    for key, values in image_ids_with_highest_max_value.iteritems():
-        if not values[0] in seeds:
-            seeds[values[0]] = []
-        seeds[values[0]].append([values[2], values[1], key])
+            if not seed_image_id in seeds:
+                seeds[seed_image_id] = {}
+            if not image_id in seeds[seed_image_id]:
+                seeds[seed_image_id][image_id] = [max_value, angle]
+            if image_id in seeds[seed_image_id]:
+                if max_value > seeds[seed_image_id][image_id][0]:
+                    seeds[seed_image_id][image_id] = [max_value, angle]
+            else:
+                seeds[seed_image_id][image_id] = [max_value, angle]
+
+    #no dups:
+    if many_image_ids_per_seed_ok == False:
+        seeds = []
+        for key, values in image_ids_with_highest_max_value.iteritems():
+            if not values[0] in seeds:
+                seeds[values[0]] = []
+            seeds[values[0]].append([values[2], values[1], key])
+
 
     #Create composite images for each seed:
-    for seed_image_id, values in seeds.iteritems():
-        values.sort(key=lambda x: x[0], reverse=True)
+    for seed_image_id, seed_values in seeds.iteritems():
         images = []
-        count = 0
-        crop_size = 150
+        crop_size = 120
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
-        for max_value, angle, image_id in values:
+        for image_id, values in seed_values.iteritems():
+            max_value,angle = values
+            #values.sort(key=lambda x: x[0], reverse=True)
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
             images.append(crop)
-        composite_image = ci.get_composite_image(images,15,15)
+        composite_image = ci.get_composite_image(images,8,8)
         cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
 
     pickle.dump(seeds, open(data_dir + 'seed_data.pickle', "wb"))
@@ -296,7 +310,7 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 #run_script(train_dir + 'train_all.sh')
 #run_script(test_dir + 'test_all.sh')
 #read_test(get_seed_image_ids(),0)
-read_all_results(0)
+read_all_results(10)
 
 #Pick top seed with the most image results over 20 and highest of those results:
 #widen_model(3360)

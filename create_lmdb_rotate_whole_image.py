@@ -37,7 +37,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
 
     max_images = 99999999
     crop_size = 28
-    before_rotate_size = 100
+    before_rotate_size = 40
     classes = 360
     if os.path.exists(lmdb_dir):
         shutil.rmtree(lmdb_dir)
