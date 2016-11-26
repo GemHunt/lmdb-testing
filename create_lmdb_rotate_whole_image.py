@@ -37,7 +37,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
 
     max_images = 99999999
     crop_size = 28
-    before_rotate_size = 40
+    before_rotate_size = 56
     classes = 360
     if os.path.exists(lmdb_dir):
         shutil.rmtree(lmdb_dir)
@@ -81,8 +81,12 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
         crop = cv2.imread(filename)
         if crop is None:
             continue
+        # images are 256 x 256, Center is 128,128, crop 56x56 from center:
 
-        crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
+        crop = crop[100:156,100:156]
+
+        #crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
+
         crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
         mask = ci.get_circle_mask(crop_size)

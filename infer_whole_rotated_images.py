@@ -34,7 +34,7 @@ from caffe.proto import caffe_pb2
 
 def infer_one_coin():
     crop_size = 28
-    before_rotate_size = 40
+    before_rotate_size = 56
 
     one_coin_rotated = infer.get_classifier("one_coin_rotated", crop_size)
     crop = cv2.imread('/home/pkrush/2-camera-scripts/crops/30287.png')

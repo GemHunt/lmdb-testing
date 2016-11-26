@@ -24,18 +24,39 @@ test_dir = home_dir + 'test/'
 test_angles = {0: (30, 330), 1: (60, 300), 2: (90, 270), 3: (120, 240), 4: (150, 210), 5: (180, 180)}
 
 
+def init_dir():
+    directories = [home_dir,data_dir,crop_dir,train_dir,test_dir]
+    for test_id in range(0,6):
+        directories.append(test_dir + str(test_id) + '/')
+    make_dir(directories)
+
+def make_dir(directories):
+    for dir in directories:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
 def create_new_seed_index():
     seed_image_ids = [random.randint(4000, 13828) for x in range(250)]
     pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
 
 def get_seed_image_ids():
     seed_image_ids = pickle.load(open(data_dir + 'seed_image_ids.pickle', "rb"))
-    return sorted(seed_image_ids)
+    #test_image_ids = pickle.load(open(data_dir + 'test_image_ids.pickle', "rb"))
+    #seed_image_ids = seed_image_ids + test_image_ids[0:180]
+    #seed_image_ids = seed_image_ids + get_wide_image_ids()
+    #pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
+    return sorted(set(seed_image_ids))
 
 def get_test_image_ids():
     test_image_ids = pickle.load(open(data_dir + 'test_image_ids.pickle', "rb"))
-    return sorted(test_image_ids)
+    #test_image_ids += get_seed_image_ids()
+    #test_image_ids += get_wide_image_ids()
+    #test_image_ids = list(set(test_image_ids))
+    #pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
+    return sorted(set(test_image_ids))
 
+def get_wide_image_ids():
+    return set([11458,12004])
 
 def rename_crops():
     crops = []
@@ -63,7 +84,7 @@ def create_single_lmdbs(seed_image_ids):
     for image_id in seed_image_ids:
         filedata = [[image_id, crop_dir + str(image_id) + '.jpg', 0]]
         lmdb_dir = train_dir + str(image_id) + '/'
-        #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 50,-1, True, False)
+        create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, 100,-1, True, False)
         print 'Creating single lmdb for ' + str(image_id)
         copy_train_files(lmdb_dir)
         shell_filename = create_train_script(image_id,lmdb_dir,train_dir + weight_filename)
@@ -174,8 +195,11 @@ def create_script_calling_script(filename, shell_filenames):
     create_shell_script(filename, shell_script)
 
 def read_test(image_ids, max_test_id):
-    all_results  = pickle.load(open(data_dir +  'all_results.pickle', "rb"))
+    all_results_filename = data_dir +  'all_results.pickle'
+    all_results =[]
     new_all_results = []
+    if os.path.exists(all_results_filename):
+        all_results  = pickle.load(open(data_dir +  'all_results.pickle', "rb"))
 
     #If only one image is being read remove the old image, else output all new results
     if len(image_ids) == 1:
@@ -204,12 +228,16 @@ def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok
     #This fills image_ids_with_highest_max_value:
     for results in all_results:
         for seed_image_id, image_id, angle, max_value in results:
+            # Well, we know this was a match already:
+            if seed_image_id == image_id:
+                continue
             #This optionally filters the results smaller:
             if len(seed_image_ids) != 0 and seed_image_id not in seed_image_ids:
                 continue
             # This optionally filters only the best results:
             if max_value < cut_off:
                 continue
+
 
             if image_id in image_ids_with_highest_max_value:
                 if image_ids_with_highest_max_value[image_id][2] < max_value:
@@ -219,12 +247,11 @@ def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok
 
             if not seed_image_id in seeds:
                 seeds[seed_image_id] = {}
+
             if not image_id in seeds[seed_image_id]:
                 seeds[seed_image_id][image_id] = [max_value, angle]
-            if image_id in seeds[seed_image_id]:
-                if max_value > seeds[seed_image_id][image_id][0]:
-                    seeds[seed_image_id][image_id] = [max_value, angle]
-            else:
+
+            if max_value > seeds[seed_image_id][image_id][0]:
                 seeds[seed_image_id][image_id] = [max_value, angle]
 
     #no dups:
@@ -239,14 +266,16 @@ def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok
     #Create composite images for each seed:
     for seed_image_id, seed_values in seeds.iteritems():
         images = []
-        crop_size = 120
+        crop_size = 160
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
         for image_id, values in seed_values.iteritems():
             max_value,angle = values
+            print str(seed_image_id) + '\t' + str(image_id)  + '\t' + str(max_value)  + '\t' + str(angle)
             #values.sort(key=lambda x: x[0], reverse=True)
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
+            cv2.putText(crop, str(image_id)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
             images.append(crop)
         composite_image = ci.get_composite_image(images,8,8)
         cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
@@ -305,12 +334,14 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 
 #Instructions from scratch:
 #create_new_seed_index()
-#create_single_lmdbs(get_seed_image_ids())
+#seeds = get_seed_image_ids()-get_wide_image_ids()
+#create_single_lmdbs(seeds)
 #create_test_lmdbs(0)
 #run_script(train_dir + 'train_all.sh')
 #run_script(test_dir + 'test_all.sh')
 #read_test(get_seed_image_ids(),0)
-read_all_results(10)
+#read_all_results(10)
+
 
 #Pick top seed with the most image results over 20 and highest of those results:
 #widen_model(3360)
@@ -326,6 +357,28 @@ read_all_results(10)
 #Test on new test set and make 30 new seeds low performers of each set.
 #Create test sets from the 500 lowest performers of each set.
 #create_new_indexes(30, 500)
+
+
+#Second Try Script:
+#I renamed lmdb-files to lmdbfiles100
+#I also copied the crops and 2 pickles for seeds and test IDs
+#I cropped 56x56 from center, dropped using the mask, and dropped the resize.
+start_time = time.time()
+init_dir()
+#seeds = get_seed_image_ids()
+print 'Done in %s seconds' % (time.time() - start_time,)
+#create_single_lmdbs(seeds)
+print 'Done in %s seconds' % (time.time() - start_time,)
+#create_test_lmdbs(0)
+print 'Done in %s seconds' % (time.time() - start_time,)
+#run_script(train_dir + 'train_all.sh')
+print 'Done in %s seconds' % (time.time() - start_time,)
+#run_script(test_dir + 'test_all.sh')
+print 'Done in %s seconds' % (time.time() - start_time,)
+#read_test(get_seed_image_ids(),0)
+print 'Done in %s seconds' % (time.time() - start_time,)
+read_all_results(15)
+print 'Done in %s seconds' % (time.time() - start_time,)
 
 
 

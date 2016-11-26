@@ -9,8 +9,12 @@ def get_results(filename,seed_image_id,low_angle,high_angle):
     df = pd.read_csv(filename)
     # temp_key, key, ground_truth, prediction, result
     # 00000, 00000, 43, 1095, 0.3076
-    del df['temp_key']
 
+    if len(df.index) == 0:
+        #Wow, it could not find anything. The image must be mud...
+        return []
+
+    del df['temp_key']
     df.prediction = df.ground_truth - (df.prediction - 1000)
     df_plus = df[df.prediction >= 0]
     df_neg = df[df.prediction < 0]
