@@ -362,20 +362,12 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 #I renamed lmdb-files to lmdbfiles100
 #I also copied the crops and 2 pickles for seeds and test IDs
 #I cropped 56x56 from center, dropped using the mask, and dropped the resize.
-#start_time = time.time()
-init_dir()
-#seeds = get_seed_image_ids()
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#create_single_lmdbs(seeds)
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#create_test_lmdbs(0)
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#run_script(train_dir + 'train_all.sh')
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#run_script(test_dir + 'test_all.sh')
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#read_test(get_seed_image_ids(),0)
-#print 'Done in %s seconds' % (time.time() - start_time,)
-#read_all_results(15)
-#print 'Done in %s seconds' % (time.time() - start_time,)
+#init_dir()
+seeds = get_seed_image_ids()
+create_single_lmdbs(seeds)
+create_test_lmdbs(0)
+run_script(train_dir + 'train_all.sh')
+run_script(test_dir + 'test_all.sh')
+read_test(get_seed_image_ids(),0)
+read_all_results(20)
 
