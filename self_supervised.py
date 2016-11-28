@@ -9,9 +9,8 @@ import os
 import create_lmdb_rotate_whole_image
 import summarize_whole_rotated_model_results
 import summarize_rotated_crops
-import caffe_image as ci
+import image_set
 import shutil
-import cv2
 import time
 import subprocess
 
@@ -40,20 +39,24 @@ def create_new_seed_index():
     pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
 
 def get_seed_image_ids():
-    seed_image_ids = pickle.load(open(data_dir + 'seed_image_ids.pickle', "rb"))
+    return get_test_image_ids()
+
+    #seed_image_ids = pickle.load(open(data_dir + 'seed_image_ids.pickle', "rb"))
+    #return sorted(set(seed_image_ids))
+
     #test_image_ids = pickle.load(open(data_dir + 'test_image_ids.pickle', "rb"))
     #seed_image_ids = seed_image_ids + test_image_ids[0:180]
     #seed_image_ids = seed_image_ids + get_wide_image_ids()
     #pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
-    return sorted(set(seed_image_ids))
 
 def get_test_image_ids():
     test_image_ids = pickle.load(open(data_dir + 'test_image_ids.pickle', "rb"))
+    return sorted(set(test_image_ids))
+
     #test_image_ids += get_seed_image_ids()
     #test_image_ids += get_wide_image_ids()
     #test_image_ids = list(set(test_image_ids))
     #pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
-    return sorted(set(test_image_ids))
 
 def get_wide_image_ids():
     return set([11458,12004])
@@ -187,7 +190,6 @@ def create_shell_script(filename, shell_script):
     os.fchmod(fd, 0755)
     os.close(fd)
 
-
 def create_script_calling_script(filename, shell_filenames):
     shell_script = ''
     for shell_filename in shell_filenames:
@@ -218,69 +220,6 @@ def read_test(image_ids, max_test_id):
             #results = summarize_whole_rotated_model_results.summarize_whole_rotated_model_results(filename, image_id,low_angle,high_angle)
             new_all_results.append(results)
     pickle.dump(new_all_results, open(data_dir + 'all_results.pickle', "wb"))
-
-def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
-    all_results = pickle.load(open(data_dir + 'all_results.pickle', "rb"))
-    #columns = ['seed_image_id', 'key', 'angle', 'max_value']
-    seeds = {}
-    image_ids_with_highest_max_value = {}
-
-    #This fills image_ids_with_highest_max_value:
-    for results in all_results:
-        for seed_image_id, image_id, angle, max_value in results:
-            # Well, we know this was a match already:
-            if seed_image_id == image_id:
-                continue
-            #This optionally filters the results smaller:
-            if len(seed_image_ids) != 0 and seed_image_id not in seed_image_ids:
-                continue
-            # This optionally filters only the best results:
-            if max_value < cut_off:
-                continue
-
-
-            if image_id in image_ids_with_highest_max_value:
-                if image_ids_with_highest_max_value[image_id][2] < max_value:
-                    image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
-            else:
-                image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
-
-            if not seed_image_id in seeds:
-                seeds[seed_image_id] = {}
-
-            if not image_id in seeds[seed_image_id]:
-                seeds[seed_image_id][image_id] = [max_value, angle]
-
-            if max_value > seeds[seed_image_id][image_id][0]:
-                seeds[seed_image_id][image_id] = [max_value, angle]
-
-    #no dups:
-    if many_image_ids_per_seed_ok == False:
-        seeds = []
-        for key, values in image_ids_with_highest_max_value.iteritems():
-            if not values[0] in seeds:
-                seeds[values[0]] = []
-            seeds[values[0]].append([values[2], values[1], key])
-
-
-    #Create composite images for each seed:
-    for seed_image_id, seed_values in seeds.iteritems():
-        images = []
-        crop_size = 160
-        images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
-        for image_id, values in seed_values.iteritems():
-            max_value,angle = values
-            print str(seed_image_id) + '\t' + str(image_id)  + '\t' + str(max_value)  + '\t' + str(angle)
-            #values.sort(key=lambda x: x[0], reverse=True)
-            crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
-            cv2.putText(crop, str(image_id)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
-            images.append(crop)
-        composite_image = ci.get_composite_image(images,8,8)
-        cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
-
-    pickle.dump(seeds, open(data_dir + 'seed_data.pickle', "wb"))
 
 def widen_model(seed_image_id):
     for test_id in range(1,6):
@@ -358,16 +297,27 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 #Create test sets from the 500 lowest performers of each set.
 #create_new_indexes(30, 500)
 
+
+def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
+    image_set.read_results(cut_off,data_dir,seed_image_ids)
+    #image_set.create_composite_images(crop_dir, data_dir, 120,5,5)
+    image_set.set_angles_postive()
+    image_set.set_starting_seed()
+
+
+
 #Second Try Script:
 #I renamed lmdb-files to lmdbfiles100
 #I also copied the crops and 2 pickles for seeds and test IDs
 #I cropped 56x56 from center, dropped using the mask, and dropped the resize.
 #init_dir()
-seeds = get_seed_image_ids()
-create_single_lmdbs(seeds)
-create_test_lmdbs(0)
-run_script(train_dir + 'train_all.sh')
-run_script(test_dir + 'test_all.sh')
-read_test(get_seed_image_ids(),0)
-read_all_results(20)
+#seeds = get_seed_image_ids()
+#create_single_lmdbs(seeds)
+#create_test_lmdbs(0)
+#run_script(train_dir + 'train_all.sh')
+#run_script(test_dir + 'test_all.sh')
+#read_test(get_seed_image_ids(),0)
+read_all_results(15)
+
+
 
