@@ -124,6 +124,7 @@ def set_starting_seed():
 
 
 def create_composite_images(crop_dir,data_dir,crop_size,rows,cols):
+    graph = []
     for seed_image_id, seed_values in results_dict.iteritems():
         images = []
         crop_size = 160
