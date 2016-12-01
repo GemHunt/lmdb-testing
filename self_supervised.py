@@ -115,7 +115,7 @@ def create_train_script(image_id,lmdb_dir,weight_filename):
     return shell_filename
 
 
-def create_single_lmdb(seed_id,max_value_cutoff,use_last_weights = False):
+def create_single_lmdb(seed_id,max_value_cutoff,test_id = 0, use_last_weights = False):
     start_time = time.time()
     print 'create_single_lmdb for ' + str(seed_id)
 
@@ -146,7 +146,7 @@ def create_single_lmdb(seed_id,max_value_cutoff,use_last_weights = False):
             filedata.append([image_id, crop_dir + str(image_id) + '.jpg', angle])
     lmdb_dir = train_dir + str(seed_id) + '/'
 
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir,100, -1,True, False)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir,int(100 + (0.5*(test_id))),-1,True, False)
     copy_train_files(lmdb_dir)
     create_train_script(seed_id, lmdb_dir, weight_filename_copy)
     print 'Done in %s seconds' % (time.time() - start_time,)
@@ -227,12 +227,16 @@ def read_test(image_ids, max_test_id):
 
 def widen_model(seed_image_id, max_test_id,max_value_cutoff):
     for test_id in range(0,max_test_id + 1):
-        create_single_lmdb(seed_image_id,max_value_cutoff)
-        run_script(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
-        run_script(test_dir + str(test_id) + '/test-'+ str(seed_image_id) + '.sh')
-        read_test([seed_image_id],test_id)
-        #in the metadata dir rm *.png
-        read_all_results(max_value_cutoff)
+        for x in range(0,2):
+            create_single_lmdb(seed_image_id,max_value_cutoff,test_id)
+            run_script(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
+            run_script(test_dir + str(test_id) + '/test-'+ str(seed_image_id) + '.sh')
+            read_test([seed_image_id],test_id)
+            #in the metadata dir rm *.png
+            image_set.read_results(max_value_cutoff, data_dir, [seed_image_id])
+
+    image_set.create_composite_images(crop_dir, data_dir, 120, 8, 20)
+
 
 def create_all_test_lmdbs():
     for test_id in range(1, 6):
@@ -306,11 +310,12 @@ def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok
 #run_script(train_dir + 'train_all.sh')
 #run_script(test_dir + 'test_all.sh')
 #read_test(get_seed_image_ids(),0)
-read_all_results(0)
 
+read_all_results(16)
 
 #Pick top seed with the most image results over 20 and highest of those results:
-#widen_model(3893,0,21)
+#widen_model(9813,5,23)
+#create_all_test_lmdbs()
 #Shrink the results to the widened seeds:
 #read_all_results(0,[11458,12004])
 #create_all_test_lmdbs()  #Raise the number of test images

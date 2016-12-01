@@ -105,7 +105,12 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
                 phase = 'val'
 
     key = 0
-    angles = ci.get_angle_sequence( images_per_angle * 360,test_id)
+
+    number_of_angles = images_per_angle * 360
+    if not create_val_set:
+        #You have to more test images if this is the test set:
+        number_of_angles = number_of_angles * len(crops)
+    angles = ci.get_angle_sequence(number_of_angles,test_id)
 
     for random_float,angle, class_angle in angles:
         random_index = random.randint(0,len(crops)-1)
