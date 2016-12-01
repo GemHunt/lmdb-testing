@@ -129,8 +129,14 @@ def create_composite_images(crop_dir,data_dir,crop_size,rows,cols):
         images = []
         crop_size = 160
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
+
+        results = []
         for image_id, values in seed_values.iteritems():
-            max_value,angle = values
+            max_value, angle = values
+            results.append([image_id, max_value,angle])
+
+        sorted_results = sorted(results, key=lambda result: result[1], reverse=True)
+        for image_id, max_value,angle in sorted_results:
             #print str(seed_image_id) + '\t' + str(image_id)  + '\t' + str(max_value)  + '\t' + str(angle)
             #values.sort(key=lambda x: x[0], reverse=True)
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)

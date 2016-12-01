@@ -68,7 +68,9 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
     train_image_batch = []
     val_image_batch = []
     id = -1
-        #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
+    crops = []
+
+    #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
     for image_id, filename, angle_offset in filedata:
         print image_id
         #imageid = filename[-9:]
@@ -91,6 +93,7 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
         crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
         crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
+        crops.append(crop)
         mask = ci.get_circle_mask(crop_size)
 
         phase = 'train'
@@ -100,60 +103,64 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
                 phase = 'train'
             if train_vs_val == 4:
                 phase = 'val'
-        key = 0
-        angles = ci.get_angle_sequence(image_id , images_per_angle * 360,test_id)
 
-        for random_float,angle, class_angle in angles:
-            angle_to_rotate = angle + angle_offset
-            if angle_to_rotate > 360:
-                angle_to_rotate - 360
+    key = 0
+    angles = ci.get_angle_sequence( images_per_angle * 360,test_id)
+
+    for random_float,angle, class_angle in angles:
+        random_index = random.randint(0,len(crops)-1)
+        crop = crops[random_index]
+        image_id = filedata[random_index][0]
+        angle_offset = filedata[random_index][2]
+
+        angle_to_rotate = angle + angle_offset
+        if angle_to_rotate > 360:
+            angle_to_rotate - 360
 
 
-            rot_image = ci.get_whole_rotated_image(crop, mask, angle_to_rotate, crop_size)
+        rot_image = ci.get_whole_rotated_image(crop, mask, angle_to_rotate, crop_size)
 
-            if create_files:
-                cv2.imwrite(img_dir + '/' + str(class_angle + 1000) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
+        if create_files:
+            cv2.imwrite(img_dir + '/' + str(class_angle + 1000) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
 
-            datum = caffe_pb2.Datum()
-            datum.data = cv2.imencode('.png', rot_image)[1].tostring()
-            #datum.data = cv2.imencode('.png', rot_image).tostring()
-            datum.label = int(class_angle)
-            datum.encoded = 1
+        datum = caffe_pb2.Datum()
+        datum.data = cv2.imencode('.png', rot_image)[1].tostring()
+        #datum.data = cv2.imencode('.png', rot_image).tostring()
+        datum.label = int(class_angle)
+        datum.encoded = 1
 
-            rot_image = rot_image.reshape(1, crop_size, crop_size)
-            image_sum += rot_image
-            #datum = caffe.io.array_to_datum(rot_image, class_angle)
+        rot_image = rot_image.reshape(1, crop_size, crop_size)
+        image_sum += rot_image
+        #datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-            #key_string = '{:08}'.format((id * 100000) +  count)
-            #key = '{:08}'.format(angle)
-            #str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
-            #str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
-            #00000000_123 is the key digits makes, but I still! don't know if I can change that.
-            str_id = '{:05}'.format(key) + ',' + '{:05}'.format(image_id) + ',' + str(class_angle)
+        #key_string = '{:08}'.format((id * 100000) +  count)
+        #key = '{:08}'.format(angle)
+        #str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
+        #str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
+        #00000000_123 is the key digits makes, but I still! don't know if I can change that.
+        str_id = '{:05}'.format(key) + ',' + '{:05}'.format(image_id) + ',' + str(class_angle)
 
-            key += 1
+        key += 1
 
-            #Use different logic for the first ten crops:
-            if id < 10:
-                if create_val_set:
-                    train_vs_val = randint(1, 4)
-                    if train_vs_val != 4:
-                        phase = 'train'
-                    if train_vs_val == 4:
-                        phase = 'val'
+        if create_val_set:
+            train_vs_val = randint(1, 4)
+            if train_vs_val != 4:
+                phase = 'train'
+            if train_vs_val == 4:
+                phase = 'val'
 
-            if phase == 'train':
-                #train_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
-                train_image_batch.append([str_id.encode('ascii'),datum])
+        if phase == 'train':
+            #train_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
+            train_image_batch.append([str_id.encode('ascii'),datum])
 
-            if phase == 'val':
-                #val_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
-                val_image_batch.append([str_id.encode('ascii'), datum])
+        if phase == 'val':
+            #val_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
+            val_image_batch.append([str_id.encode('ascii'), datum])
 
-        caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
-        caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
-        train_image_batch = []
-        val_image_batch = []
+    caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
+    caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
+    train_image_batch = []
+    val_image_batch = []
 
 
     # label_batch = []
