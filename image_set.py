@@ -122,6 +122,39 @@ def set_starting_seed():
     #Starting seed is 0 and 360.
     pass
 
+def get_nodes():
+    nodes = set(results_dict.keys())
+    for seed_image_id, seed_values in results_dict.iteritems():
+        for image_id, values in seed_values.iteritems():
+            if not image_id in nodes:
+                nodes.add(image_id)
+    return nodes
+
+def get_edges():
+    # this is currently ignoring dup edges.
+    edges = {}
+    for seed_image_id, seed_values in results_dict.iteritems():
+        for image_id, values in seed_values.iteritems():
+            max_value = values[0]
+            angle = values[1]
+            node1 = seed_image_id
+            node2 = image_id
+            edge_value = [max_value,angle]
+
+            #flip the node order so the first node image_id is always lower
+            if node1 < node2:
+                temp = node1
+                node1 = node2
+                node2 = temp
+                edge_value = [max_value,-angle]
+            edge_key = (node1,node2)
+            if not edge_key in edges.keys():
+                edges[edge_key] = edge_value
+    return edges
+
+
+
+
 
 def create_composite_images(crop_dir,data_dir,crop_size,rows,cols):
     graph = []

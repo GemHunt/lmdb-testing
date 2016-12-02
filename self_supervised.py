@@ -13,7 +13,7 @@ import image_set
 import shutil
 import time
 import subprocess
-
+import graph
 
 home_dir = '/home/pkrush/lmdb-files/'
 data_dir = home_dir + 'metadata/'
@@ -280,11 +280,70 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 
 def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
     image_set.read_results(cut_off,data_dir,seed_image_ids)
-    image_set.create_composite_images(crop_dir, data_dir, 120,8,20)
+    image_set.create_composite_images(crop_dir, data_dir, 120,6,6)
 
-    #This is a start of working with the results data in a graph format:
-    #image_set.set_angles_postive()
+
+def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
+    image_set.read_results(cut_off,data_dir,seed_image_ids)
+    image_set.set_angles_postive()
     #image_set.set_starting_seed()
+    nodes = image_set.get_nodes()
+    edges = image_set.get_edges()
+    pickle.dump(nodes, open(data_dir + 'nodes.pickle', "wb"))
+    pickle.dump(edges, open(data_dir + 'edges.pickle', "wb"))
+
+def get_pos_angle(angle):
+    angle = angle % 360
+    if angle < 0:
+        angle = angle + 360
+    return angle
+
+def print_paths(path_set,edges):
+    for paths in path_set:
+        for path in paths:
+            node1 = -1
+            node2 = -1
+            angle_total = 0
+            for node in path:
+                if node1 == -1:
+                    node1 = node
+                    continue
+                node2 = node
+                key = (node1,node2)
+                if key in edges:
+                    max_value,angle = edges[(node1,node2)]
+                else:
+                    max_value, angle = edges[(node2, node1)]
+                    angle = -angle
+                print node1,node2,max_value,angle
+                angle_total += angle
+                node1 = node
+            angle_total = get_pos_angle(angle_total)
+            if len(path) == 2:
+                print '                       ', path, angle_total, '\n'
+            else:
+                print '    ' , path, angle_total, '\n'
+
+
+
+read_all_results(10)
+save_graph(10)
+nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
+edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
+paths = graph.get_paths(nodes, edges.keys())
+print_paths(paths,edges)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #Instructions from scratch:
@@ -311,7 +370,7 @@ def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok
 #run_script(test_dir + 'test_all.sh')
 #read_test(get_seed_image_ids(),0)
 
-read_all_results(16)
+#read_all_results(16)
 
 #Pick top seed with the most image results over 20 and highest of those results:
 #widen_model(9813,5,23)
