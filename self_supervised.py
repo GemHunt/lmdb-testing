@@ -274,13 +274,13 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
                 if count < total_new_seed_imgs + total_new_test_imgs:
                     test_image_ids.append(image_id)
         count = 0
-
     pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
     pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
 
+
 def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
     image_set.read_results(cut_off,data_dir,seed_image_ids)
-    image_set.create_composite_images(crop_dir, data_dir, 120,6,6)
+    #image_set.create_composite_images(crop_dir, data_dir, 120,10,6)
 
 
 def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
@@ -292,46 +292,11 @@ def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = Tru
     pickle.dump(nodes, open(data_dir + 'nodes.pickle', "wb"))
     pickle.dump(edges, open(data_dir + 'edges.pickle', "wb"))
 
-def get_pos_angle(angle):
-    angle = angle % 360
-    if angle < 0:
-        angle = angle + 360
-    return angle
-
-def print_paths(path_set,edges):
-    for paths in path_set:
-        for path in paths:
-            node1 = -1
-            node2 = -1
-            angle_total = 0
-            for node in path:
-                if node1 == -1:
-                    node1 = node
-                    continue
-                node2 = node
-                key = (node1,node2)
-                if key in edges:
-                    max_value,angle = edges[(node1,node2)]
-                else:
-                    max_value, angle = edges[(node2, node1)]
-                    angle = -angle
-                print node1,node2,max_value,angle
-                angle_total += angle
-                node1 = node
-            angle_total = get_pos_angle(angle_total)
-            if len(path) == 2:
-                print '                       ', path, angle_total, '\n'
-            else:
-                print '    ' , path, angle_total, '\n'
-
-
 
 read_all_results(10)
-save_graph(10)
-nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
-edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
-paths = graph.get_paths(nodes, edges.keys())
-print_paths(paths,edges)
+#save_graph(10)
+image_set.drop_bad_nodes(data_dir, 8058)
+
 
 
 

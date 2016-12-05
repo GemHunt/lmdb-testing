@@ -3,6 +3,7 @@ import cPickle as pickle
 import cv2
 import caffe_image as ci
 import pandas as pd
+import graph
 
 results_dict = {}
 Image = namedtuple('Image','seed_image_id image_id angle max_value')
@@ -152,9 +153,72 @@ def get_edges():
                 edges[edge_key] = edge_value
     return edges
 
+def drop_bad_nodes(data_dir, seed_image_id):
+    nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
+    edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
+
+    test_images = results_dict[seed_image_id]
+
+    paths = graph.get_paths(nodes, edges.keys(), seed_image_id, test_images.keys())
+    #Get total_short_paths, total_good_short_paths
+    #Get the correct angle first.
 
 
+    graph_results = []
 
+    for edge_paths in paths:
+        max_value_ave = 0
+        test_image_id = 0
+        test_max_value = 0
+        test_image_angle = 0
+        angles = []
+        max_value_path_total = 0
+
+        for path in edge_paths:
+            node1 = -1
+            node2 = -1
+            angle_total = 0
+            max_value_edge_path_total = 0
+
+            for node in path:
+                if node1 == -1:
+                    node1 = node
+                    continue
+                node2 = node
+                key = (node1, node2)
+                if key in edges:
+                    max_value, angle = edges[(node1, node2)]
+                else:
+                    max_value, angle = edges[(node2, node1)]
+                    angle = -angle
+                #print node1, node2, max_value, angle
+                angle_total += angle
+                max_value_edge_path_total += max_value
+                node1 = node
+
+            max_value_path_total += max_value_edge_path_total / len(path)
+            angle_total = ci.get_pos_angle(angle_total)
+            if len(path) == 2:
+                test_image_id = node2
+                test_max_value = max_value
+                test_image_angle = angle_total
+                #print '                       ', path, angle_total, '\n'
+            else:
+                angles.append(angle_total)
+                #print '    ', path, angle_total, '\n'
+        good_paths_count = 0
+        for angle in angles:
+            if abs(test_image_angle - angle) < 4:
+                good_paths_count +=1
+        max_value_ave = max_value_path_total/len(edge_paths)
+        graph_results.append([test_image_id, test_image_angle, test_max_value, max_value_ave, len(edge_paths), good_paths_count])
+
+    print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
+    graph_results = sorted(graph_results, key=lambda graph_results: graph_results[2], reverse=True)
+
+
+    for result in graph_results:
+        print result
 
 def create_composite_images(crop_dir,data_dir,crop_size,rows,cols):
     graph = []

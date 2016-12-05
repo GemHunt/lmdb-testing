@@ -205,3 +205,11 @@ def get_composite_image(images,cols,rows):
             composite_image[x*crop_rows:((x+1)*crop_rows), y*crop_cols:((y+1)*crop_cols)] = images[key]
             key += 1
     return composite_image
+
+def get_pos_angle(angle):
+    angle = angle % 360
+    if angle < 0:
+        angle = angle + 360
+    return angle
+
+

@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import caffe_image as ci
 
 try:
     import pygraphviz
@@ -12,15 +13,12 @@ except ImportError:
         raise ImportError("This example needs Graphviz and either "
                           "PyGraphviz or PyDotPlus")
 
-def get_paths(nodes, edges):
-    print 'Starting Network build'
-
+def get_paths(nodes, edges,start_node, end_nodes):
     G = nx.Graph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
-    print 'Network built'
-
     paths = []
-    #paths.append(list(nx.all_simple_paths(G,6280,3664,2)))
-    paths.append(list(nx.all_simple_paths(G,9813,6111,3)))
+    for end_node in end_nodes:
+        paths.append(list(nx.all_simple_paths(G, start_node, end_node, 2)))
     return paths
+
