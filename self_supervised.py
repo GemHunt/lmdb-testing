@@ -280,7 +280,7 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
 
 def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
     image_set.read_results(cut_off,data_dir,seed_image_ids)
-    #image_set.create_composite_images(crop_dir, data_dir, 120,10,6)
+    image_set.create_composite_images(crop_dir, data_dir, 100,3,3)
 
 
 def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
@@ -293,21 +293,17 @@ def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = Tru
     pickle.dump(edges, open(data_dir + 'edges.pickle', "wb"))
 
 
-read_all_results(10)
+
+read_all_results(0)
 #save_graph(10)
-image_set.drop_bad_nodes(data_dir, 8058)
-
-
-
-
-
-
-
-
-
-
-
-
+seed_image_id = 8058
+cumulative_angle = 0
+image_set.create_composite_images(crop_dir, data_dir, 140,10,30,seed_image_id)
+most_positive_connected_test_image_id = seed_image_id
+for count in range(0,3000):
+    most_positive_connected_test_image_id, angle_diff = image_set.drop_bad_nodes(data_dir, most_positive_connected_test_image_id)
+    cumulative_angle += angle_diff
+    print 'cumulative_angle:',cumulative_angle
 
 
 

@@ -213,16 +213,36 @@ def drop_bad_nodes(data_dir, seed_image_id):
         max_value_ave = max_value_path_total/len(edge_paths)
         graph_results.append([test_image_id, test_image_angle, test_max_value, max_value_ave, len(edge_paths), good_paths_count])
 
-    print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
     graph_results = sorted(graph_results, key=lambda graph_results: graph_results[2], reverse=True)
 
-
+    widened_seeds = [3893,5107,6280,9813]
+    max_positive_connections = 0
+    most_positive_connected_test_image_id = -1
     for result in graph_results:
         print result
+        #if 330 < result[1]:
+        if 10 < result[1] < 30:
+            if result[5] > max_positive_connections:
+                if result[0] not in widened_seeds:
+                    most_positive_connected_test_image_id = result[0]
+                    max_positive_connections = result[5]
+    print '\nmost_positive_connected_test_image_id:',most_positive_connected_test_image_id,'max_positive_connections:',max_positive_connections
 
-def create_composite_images(crop_dir,data_dir,crop_size,rows,cols):
+    graph_results = [x for x in graph_results if x[0] == most_positive_connected_test_image_id]
+    print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
+    print graph_results
+    return most_positive_connected_test_image_id, graph_results[0][1]
+
+
+def create_composite_images(crop_dir,data_dir,crop_size,rows,cols, seed_image_id_filter = -1):
     graph = []
-    for seed_image_id, seed_values in results_dict.iteritems():
+    results = {}
+    if seed_image_id_filter == -1:
+        results = results_dict
+    else:
+        results[seed_image_id_filter] = results_dict[seed_image_id_filter]
+
+    for seed_image_id, seed_values in results.iteritems():
         images = []
         crop_size = 160
         images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
