@@ -3,17 +3,16 @@ A set of functions to test out self supervised rotated coin image models
 '''
 
 import cPickle as pickle
-import random
 import glob
 import os
-import create_lmdb_rotate_whole_image
-import summarize_whole_rotated_model_results
-import summarize_rotated_crops
-import image_set
+import random
 import shutil
-import time
 import subprocess
-import graph
+import time
+
+import create_lmdb_rotate_whole_image
+import image_set
+import summarize_rotated_crops
 
 home_dir = '/home/pkrush/lmdb-files/'
 data_dir = home_dir + 'metadata/'
@@ -277,14 +276,8 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
     pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
     pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
 
-
-def read_all_results(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
-    image_set.read_results(cut_off,data_dir,seed_image_ids)
-    image_set.create_composite_images(crop_dir, data_dir, 100,3,3)
-
-
 def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
-    image_set.read_results(cut_off,data_dir,seed_image_ids)
+    # image_set.read_results(cut_off,data_dir,seed_image_ids)
     image_set.set_angles_postive()
     #image_set.set_starting_seed()
     nodes = image_set.get_nodes()
@@ -293,15 +286,24 @@ def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = Tru
     pickle.dump(edges, open(data_dir + 'edges.pickle', "wb"))
 
 
+def read_all_results(cut_off=0, seed_image_ids=[], seeds_share_test_images=True, remove_widened_seeds=False):
+    image_set.read_results(cut_off, data_dir, seed_image_ids, seeds_share_test_images, remove_widened_seeds)
+    # image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
 
-read_all_results(0)
-#save_graph(10)
-seed_image_id = 8058
+
+read_all_results(5, seeds_share_test_images=True, remove_widened_seeds=True)
+# save_graph(5)
+# read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
+seed_image_id = 7855
 cumulative_angle = 0
-image_set.create_composite_images(crop_dir, data_dir, 140,10,30,seed_image_id)
 most_positive_connected_test_image_id = seed_image_id
-for count in range(0,3000):
-    most_positive_connected_test_image_id, angle_diff = image_set.drop_bad_nodes(data_dir, most_positive_connected_test_image_id)
+connected_test_image_ids = []
+
+for count in range(0, 2000):
+    most_positive_connected_test_image_id, angle_diff = image_set.drop_bad_nodes(data_dir,
+                                                                                 most_positive_connected_test_image_id,
+                                                                                 connected_test_image_ids)
+    connected_test_image_ids.append(most_positive_connected_test_image_id)
     cumulative_angle += angle_diff
     print 'cumulative_angle:',cumulative_angle
 

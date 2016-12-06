@@ -1,9 +1,10 @@
 """This module is a group of functions for dealing with images in general and how they relate to Caffe."""
-import os
-import sys
-import cv2
 import math
+import os
 import random
+import sys
+
+import cv2
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -20,12 +21,8 @@ import PIL.Image
 if __name__ == '__main__':
     dirname = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(dirname,'..','..'))
-    import digits.config
-
-from digits import utils
 
 # Import digits.config first to set the path to Caffe
-import caffe.io
 from caffe.proto import caffe_pb2
 
 def get_whole_rotated_image(crop,mask,angle, crop_size):
@@ -66,8 +63,8 @@ def get_rotated_crop(crop_dir, crop_id, crop_size, angle):
     return crop
 
 def rotate_point(angle, center_x,center_y,point_x,point_y):
-    rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x;
-    rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y;
+    rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x
+    rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y
     return rotated_x,rotated_y
 
 def rotate_matrix(angle, center_x,center_y,mat):
@@ -206,10 +203,13 @@ def get_composite_image(images,cols,rows):
             key += 1
     return composite_image
 
-def get_pos_angle(angle):
+
+def get_formated_angle(angle):
     angle = angle % 360
-    if angle < 0:
+    if angle < -179:
         angle = angle + 360
+    if angle > 180:
+        angle = angle - 360
     return angle
 
 

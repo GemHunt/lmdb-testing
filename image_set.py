@@ -1,19 +1,24 @@
-from collections import namedtuple
 import cPickle as pickle
+from collections import namedtuple
+
 import cv2
-import caffe_image as ci
 import pandas as pd
+
+import caffe_image as ci
 import graph
 
 results_dict = {}
 Image = namedtuple('Image','seed_image_id image_id angle max_value')
 Group = namedtuple('Group','group_id starting_seed_id images')
 seed_groups = []
+widened_seeds = [3893, 5107, 6280, 9813, 4152]
 
-def read_results(cut_off,data_dir,seed_image_ids = []):
+
+def read_results(cut_off, data_dir, seed_image_ids=[], seeds_share_test_images=True, remove_widened_seeds=False):
     all_results = pickle.load(open(data_dir + 'all_results.pickle', "rb"))
     # columns = ['seed_image_id', 'image_id', 'angle', 'max_value']
     image_ids_with_highest_max_value = {}
+    results_dict.clear()
 
     # This fills image_ids_with_highest_max_value:
     for results in all_results:
@@ -28,12 +33,31 @@ def read_results(cut_off,data_dir,seed_image_ids = []):
             if max_value < cut_off:
                 continue
 
+            # This optionally filters out widened seeds
+            if remove_widened_seeds:
+                if seed_image_id in widened_seeds:
+                    continue
+
+
             if image_id in image_ids_with_highest_max_value:
                 if image_ids_with_highest_max_value[image_id][2] < max_value:
                     image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
             else:
                 image_ids_with_highest_max_value[image_id] = [seed_image_id, angle, max_value]
 
+            if not seed_image_id in results_dict:
+                results_dict[seed_image_id] = {}
+
+            if not image_id in results_dict[seed_image_id]:
+                results_dict[seed_image_id][image_id] = [max_value, angle]
+
+            if max_value > results_dict[seed_image_id][image_id][0]:
+                results_dict[seed_image_id][image_id] = [max_value, angle]
+
+    if not seeds_share_test_images:
+        results_dict.clear()
+        for image_id, values in image_ids_with_highest_max_value.iteritems():
+            seed_image_id, angle, max_value = values
             if not seed_image_id in results_dict:
                 results_dict[seed_image_id] = {}
 
@@ -58,17 +82,6 @@ def get_results_list(seed_id_filter = -1):
             Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
             results_list.append(Image(seed_image_id, image_id, angle, max_value))
     return results_list
-
-
-def set_test_images_to_be_exclusive_in_seeds():
-    #no dups:
-    #if many_image_ids_per_seed_ok == False:
-        #seeds = []
-        #for key, values in image_ids_with_highest_max_value.iteritems():
-            #if not values[0] in seeds:
-                #seeds[values[0]] = []
-            #seeds[values[0]].append([values[2], values[1], key])
-    pass
 
 def set_angles_postive():
     Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
@@ -96,7 +109,7 @@ def set_angles_postive():
         else:
             existing_max_value = results_dict[image.seed_image_id][image.image_id][0]
             existing_angle = results_dict[image.seed_image_id][image.image_id][1]
-            if abs(image.angle - existing_angle) > 3:
+            if abs(image.angle - existing_angle) > 2:
                 print 'Angles off by more than 3: ',image, existing_angle
 
             if image.max_value > existing_max_value:
@@ -153,17 +166,13 @@ def get_edges():
                 edges[edge_key] = edge_value
     return edges
 
-def drop_bad_nodes(data_dir, seed_image_id):
+
+def drop_bad_nodes(data_dir, seed_image_id, connected_test_image_ids):
     nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
     edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
-
     test_images = results_dict[seed_image_id]
-
     paths = graph.get_paths(nodes, edges.keys(), seed_image_id, test_images.keys())
-    #Get total_short_paths, total_good_short_paths
-    #Get the correct angle first.
-
-
+    bad_paths = []
     graph_results = []
 
     for edge_paths in paths:
@@ -171,7 +180,7 @@ def drop_bad_nodes(data_dir, seed_image_id):
         test_image_id = 0
         test_max_value = 0
         test_image_angle = 0
-        angles = []
+        angles = {}
         max_value_path_total = 0
 
         for path in edge_paths:
@@ -179,7 +188,7 @@ def drop_bad_nodes(data_dir, seed_image_id):
             node2 = -1
             angle_total = 0
             max_value_edge_path_total = 0
-
+            max_value = 0
             for node in path:
                 if node1 == -1:
                     node1 = node
@@ -197,31 +206,41 @@ def drop_bad_nodes(data_dir, seed_image_id):
                 node1 = node
 
             max_value_path_total += max_value_edge_path_total / len(path)
-            angle_total = ci.get_pos_angle(angle_total)
+            angle_total = ci.get_formated_angle(angle_total)
             if len(path) == 2:
                 test_image_id = node2
                 test_max_value = max_value
                 test_image_angle = angle_total
                 #print '                       ', path, angle_total, '\n'
             else:
-                angles.append(angle_total)
+                angles[tuple(path)] = angle_total
                 #print '    ', path, angle_total, '\n'
         good_paths_count = 0
-        for angle in angles:
-            if abs(test_image_angle - angle) < 4:
+        for saved_path, angle in angles.iteritems():
+            if abs(test_image_angle - angle) < 3:
                 good_paths_count +=1
+            else:
+                print saved_path, angle, test_image_angle
+                bad_paths.append(saved_path)
+
         max_value_ave = max_value_path_total/len(edge_paths)
-        graph_results.append([test_image_id, test_image_angle, test_max_value, max_value_ave, len(edge_paths), good_paths_count])
+        graph_results.append(
+            [test_image_id, test_image_angle, test_max_value, max_value_ave, len(edge_paths) - 1, good_paths_count])
+
+
+        # for path in bad_paths:
+        # print path
 
     graph_results = sorted(graph_results, key=lambda graph_results: graph_results[2], reverse=True)
 
-    widened_seeds = [3893,5107,6280,9813]
     max_positive_connections = 0
     most_positive_connected_test_image_id = -1
     for result in graph_results:
         print result
         #if 330 < result[1]:
-        if 10 < result[1] < 30:
+        if result[0] in connected_test_image_ids:
+            continue
+        if 0 < result[1] < 30:
             if result[5] > max_positive_connections:
                 if result[0] not in widened_seeds:
                     most_positive_connected_test_image_id = result[0]
