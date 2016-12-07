@@ -276,36 +276,32 @@ def create_new_indexes(total_new_seed_imgs,total_new_test_imgs):
     pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
     pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
 
-def save_graph(cut_off = 0,seed_image_ids = [], many_image_ids_per_seed_ok = True):
-    # image_set.read_results(cut_off,data_dir,seed_image_ids)
+
+def save_graph():
     image_set.set_angles_postive()
-    #image_set.set_starting_seed()
     nodes = image_set.get_nodes()
     edges = image_set.get_edges()
     pickle.dump(nodes, open(data_dir + 'nodes.pickle', "wb"))
     pickle.dump(edges, open(data_dir + 'edges.pickle', "wb"))
 
 
-def read_all_results(cut_off=0, seed_image_ids=[], seeds_share_test_images=True, remove_widened_seeds=False):
+def read_all_results(cut_off=0, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
     image_set.read_results(cut_off, data_dir, seed_image_ids, seeds_share_test_images, remove_widened_seeds)
     # image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
 
 
-read_all_results(5, seeds_share_test_images=True, remove_widened_seeds=True)
-# save_graph(5)
+read_all_results(10, seeds_share_test_images=True, remove_widened_seeds=True)
+save_graph()
 # read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
-seed_image_id = 7855
-cumulative_angle = 0
-most_positive_connected_test_image_id = seed_image_id
-connected_test_image_ids = []
+seed_image_id = 45
+most_connected_seeds = image_set.find_most_connected_seeds(data_dir, seed_image_id)
+if len(most_connected_seeds) != 0:
+    image_set.create_composite_image(crop_dir, data_dir, 130, 10, 30, most_connected_seeds.iterkeys())
+    for seed_image_id, values in most_connected_seeds.iteritems():
+        print values
+print 'Count:', len(most_connected_seeds)
 
-for count in range(0, 2000):
-    most_positive_connected_test_image_id, angle_diff = image_set.drop_bad_nodes(data_dir,
-                                                                                 most_positive_connected_test_image_id,
-                                                                                 connected_test_image_ids)
-    connected_test_image_ids.append(most_positive_connected_test_image_id)
-    cumulative_angle += angle_diff
-    print 'cumulative_angle:',cumulative_angle
+
 
 
 

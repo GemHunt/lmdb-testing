@@ -2,10 +2,10 @@ import cPickle as pickle
 from collections import namedtuple
 
 import cv2
+import networkx as nx
 import pandas as pd
 
 import caffe_image as ci
-import graph
 
 results_dict = {}
 Image = namedtuple('Image','seed_image_id image_id angle max_value')
@@ -14,7 +14,7 @@ seed_groups = []
 widened_seeds = [3893, 5107, 6280, 9813, 4152]
 
 
-def read_results(cut_off, data_dir, seed_image_ids=[], seeds_share_test_images=True, remove_widened_seeds=False):
+def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
     all_results = pickle.load(open(data_dir + 'all_results.pickle', "rb"))
     # columns = ['seed_image_id', 'image_id', 'angle', 'max_value']
     image_ids_with_highest_max_value = {}
@@ -27,8 +27,9 @@ def read_results(cut_off, data_dir, seed_image_ids=[], seeds_share_test_images=T
             if seed_image_id == image_id:
                 continue
             # This optionally filters the results smaller:
-            if len(seed_image_ids) != 0 and seed_image_id not in seed_image_ids:
-                continue
+            if seed_image_ids is not None:
+                if seed_image_id not in seed_image_ids:
+                    continue
             # This optionally filters only the best results:
             if max_value < cut_off:
                 continue
@@ -167,11 +168,26 @@ def get_edges():
     return edges
 
 
-def drop_bad_nodes(data_dir, seed_image_id, connected_test_image_ids):
+def find_most_connected_seeds(data_dir, seed_image_id):
+    most_connected_seeds = {}
     nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
     edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
     test_images = results_dict[seed_image_id]
-    paths = graph.get_paths(nodes, edges.keys(), seed_image_id, test_images.keys())
+    G = nx.Graph()
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+    return get_most_connected_seeds(G, edges, seed_image_id, most_connected_seeds, 0)
+
+
+def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, level):
+    if not start_node in results_dict.iterkeys():
+        return most_connected_seeds
+
+    paths = []
+    for end_node in results_dict[start_node]:
+        if end_node not in most_connected_seeds.iterkeys():
+            paths.append(list(nx.all_simple_paths(G, start_node, end_node, 2)))
+
     bad_paths = []
     graph_results = []
 
@@ -220,7 +236,7 @@ def drop_bad_nodes(data_dir, seed_image_id, connected_test_image_ids):
             if abs(test_image_angle - angle) < 3:
                 good_paths_count +=1
             else:
-                print saved_path, angle, test_image_angle
+                # print saved_path, angle, test_image_angle
                 bad_paths.append(saved_path)
 
         max_value_ave = max_value_path_total/len(edge_paths)
@@ -233,33 +249,29 @@ def drop_bad_nodes(data_dir, seed_image_id, connected_test_image_ids):
 
     graph_results = sorted(graph_results, key=lambda graph_results: graph_results[2], reverse=True)
 
-    max_positive_connections = 0
-    most_positive_connected_test_image_id = -1
     for result in graph_results:
-        print result
-        #if 330 < result[1]:
-        if result[0] in connected_test_image_ids:
-            continue
-        if 0 < result[1] < 30:
-            if result[5] > max_positive_connections:
-                if result[0] not in widened_seeds:
-                    most_positive_connected_test_image_id = result[0]
-                    max_positive_connections = result[5]
-    print '\nmost_positive_connected_test_image_id:',most_positive_connected_test_image_id,'max_positive_connections:',max_positive_connections
+        seed_image_id = result[0]
+        if seed_image_id not in widened_seeds:
+            if seed_image_id not in most_connected_seeds:
+                if seed_image_id != start_node:
+                    if result[5] > 10:
+                        most_connected_seeds[seed_image_id] = result
+                        if level < 18:
+                            most_connected_seeds = get_most_connected_seeds(G, edges, seed_image_id,
+                                                                            most_connected_seeds, level + 1)
+                            print level
 
-    graph_results = [x for x in graph_results if x[0] == most_positive_connected_test_image_id]
-    print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
-    print graph_results
-    return most_positive_connected_test_image_id, graph_results[0][1]
+    # print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
+    # print graph_results
+
+    return most_connected_seeds
 
 
-def create_composite_images(crop_dir,data_dir,crop_size,rows,cols, seed_image_id_filter = -1):
-    graph = []
-    results = {}
-    if seed_image_id_filter == -1:
+def create_composite_images(crop_dir, data_dir, crop_size, rows, cols, seed_image_ids=None):
+    if seed_image_ids is None:
         results = results_dict
     else:
-        results[seed_image_id_filter] = results_dict[seed_image_id_filter]
+        results = {seed_image_id: results_dict[seed_image_id] for seed_image_id in seed_image_ids}
 
     for seed_image_id, seed_values in results.iteritems():
         images = []
@@ -273,8 +285,6 @@ def create_composite_images(crop_dir,data_dir,crop_size,rows,cols, seed_image_id
 
         sorted_results = sorted(results, key=lambda result: result[1], reverse=True)
         for image_id, max_value,angle in sorted_results:
-            #print str(seed_image_id) + '\t' + str(image_id)  + '\t' + str(max_value)  + '\t' + str(angle)
-            #values.sort(key=lambda x: x[0], reverse=True)
             crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
@@ -284,3 +294,10 @@ def create_composite_images(crop_dir,data_dir,crop_size,rows,cols, seed_image_id
         cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
 
 
+def create_composite_image(crop_dir, data_dir, crop_size, rows, cols, seed_image_ids):
+    images = []
+    for seed_image_id in seed_image_ids:
+        crop = ci.get_rotated_crop(crop_dir, seed_image_id, crop_size, 0)
+        images.append(crop)
+    composite_image = ci.get_composite_image(images, rows, cols)
+    cv2.imwrite(data_dir + 'composite_image.png', composite_image)
