@@ -11,7 +11,7 @@ results_dict = {}
 Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
 Group = namedtuple('Group', 'group_id starting_seed_id images')
 seed_groups = []
-widened_seeds = [3893, 5107, 6280, 9813, 4152]
+widened_seeds = [3893, 5107, 6280, 9813, 4152,8924,7855]
 
 
 def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
@@ -309,3 +309,13 @@ def create_composite_image(crop_dir, data_dir, crop_size, rows, cols, seed_image
         images.append(crop)
     composite_image = ci.get_composite_image(images, rows, cols)
     cv2.imwrite(data_dir + 'composite_image.png', composite_image)
+
+
+def create_composite_image_from_filedata(crop_dir, data_dir, crop_size, rows, cols, filedata):
+    images = []
+    for image_id, filename, angle_offset in filedata:
+        crop = ci.get_rotated_crop(crop_dir, image_id, crop_size, angle_offset)
+        images.append(crop)
+    composite_image = ci.get_composite_image(images, rows, cols)
+    cv2.imwrite(data_dir + 'composite_image.png', composite_image)
+

@@ -118,14 +118,7 @@ def create_train_script(lmdb_dir, weight_filename):
     return shell_filename
 
 
-def create_single_lmdb(seed_id, max_value_cutoff, test_id=0):
-    start_time = time.time()
-    print 'create_single_lmdb for ' + str(seed_id)
-
-    weight_filename = train_dir + str(seed_id) + '/' + 'starting-weights.caffemodel'
-    weight_filename_copy = train_dir + 'starting-weights.caffemodel'
-    shutil.copyfile(weight_filename_copy, weight_filename)
-
+def get_single_lmdb_filedata(seed_id, max_value_cutoff):
     seeds = pickle.load(open(data_dir + 'seed_data.pickle', "rb"))
     filedata = []
     values = seeds[seed_id]
@@ -147,9 +140,20 @@ def create_single_lmdb(seed_id, max_value_cutoff, test_id=0):
         max_value, angle = test_values
         if max_value > max_value_cutoff:
             filedata.append([image_id, crop_dir + str(image_id) + '.jpg', angle])
-    lmdb_dir = train_dir + str(seed_id) + '/'
+    return filedata
 
-    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, int(100 + (0.5 * test_id)), -1, True, False)
+def create_single_lmdb(seed_image_id, filedata, test_id=0):
+    start_time = time.time()
+    print 'create_single_lmdb for ' + str(seed_image_id)
+
+    weight_filename = train_dir + str(seed_image_id) + '/' + 'starting-weights.caffemodel'
+    weight_filename_copy = train_dir + 'starting-weights.caffemodel'
+    shutil.copyfile(weight_filename_copy, weight_filename)
+
+    lmdb_dir = train_dir + str(seed_image_id) + '/'
+
+    #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, int(100 + (0.5 * test_id)), -1, True, False)
+    create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, int(200 + (2 * test_id)), -1, True, False)
     copy_train_files(lmdb_dir)
     create_train_script(lmdb_dir, weight_filename_copy)
     print 'Done in %s seconds' % (time.time() - start_time,)
@@ -236,14 +240,25 @@ def read_test(image_ids, max_test_id):
 def widen_model(seed_image_id, max_test_id, max_value_cutoff):
     for test_id in range(0, max_test_id + 1):
         for x in range(0, 2):
-            create_single_lmdb(seed_image_id, max_value_cutoff, test_id)
-            run_script(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
-            run_script(test_dir + str(test_id) + '/test-' + str(seed_image_id) + '.sh')
-            read_test([seed_image_id], test_id)
-            # in the metadata dir rm *.png
-            image_set.read_results(max_value_cutoff, data_dir, [seed_image_id])
-
+            filedata = get_single_lmdb_filedata(seed_image_id, max_value_cutoff)
+            run_train_test(seed_image_id, filedata, max_value_cutoff, test_id)
     image_set.create_composite_images(crop_dir, data_dir, 120, 8, 20)
+
+
+def run_train_test(seed_image_id, filedata,max_value_cutoff, test_id):
+    create_single_lmdb(seed_image_id, filedata, test_id)
+    run_script(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
+    run_script(test_dir + str(test_id) + '/test-' + str(seed_image_id) + '.sh')
+    read_test([seed_image_id], test_id)
+    # in the metadata dir rm *.png
+    image_set.read_results(max_value_cutoff, data_dir, [seed_image_id])
+
+
+def run_test(seed_image_id, max_value_cutoff, test_id):
+    for test_id in range(0, test_id + 1):
+        run_script(test_dir + str(test_id) + '/test-' + str(seed_image_id) + '.sh')
+    read_test([seed_image_id], test_id)
+    image_set.read_results(max_value_cutoff, data_dir, [seed_image_id])
 
 
 def create_all_test_lmdbs():
@@ -298,10 +313,11 @@ def save_graph():
 
 def read_all_results(cut_off=0, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
     image_set.read_results(cut_off, data_dir, seed_image_ids, seeds_share_test_images, remove_widened_seeds)
-    # image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
+    image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
 
 
 def link_seed_by_graph(seed_image_id, min_connections, max_depth):
+    filedata = []
     read_all_results(10, seeds_share_test_images=True, remove_widened_seeds=True)
     save_graph()
     # read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
@@ -310,11 +326,28 @@ def link_seed_by_graph(seed_image_id, min_connections, max_depth):
         image_set.create_composite_image(crop_dir, data_dir, 130, 10, 30, most_connected_seeds.iterkeys())
         for seed_image_id, values in most_connected_seeds.iteritems():
             print values
-    print 'Count:', len(most_connected_seeds)
+            filedata.append([seed_image_id, crop_dir + str(seed_image_id) + '.jpg', values[2]])
+    print 'Count of images linked by graph:', len(most_connected_seeds)
+    return filedata
 
+
+
+#read_all_results(10, seeds_share_test_images=False, remove_widened_seeds=True)
 
 # Good ones to link: 4866,8924,7855
-link_seed_by_graph(7132, 10, 18)
+seed_image_id = 8058
+filedata = link_seed_by_graph(seed_image_id,min_connections=10, max_depth=18)
+image_set.create_composite_image_from_filedata(crop_dir, data_dir, 140, rows=10, cols=20, filedata=filedata)
+if len(filedata) > 5:
+    max_value_cutoff = 10
+    #run_train_test(seed_image_id, filedata, max_value_cutoff, test_id=5)
+    run_test(seed_image_id, max_value_cutoff, test_id=5)
+    read_all_results(15)
+    image_set.create_composite_images(crop_dir, data_dir,crop_size = 140,rows=10,cols=50)
+else:
+    print 'Not enough seeds found'
+'''
+
 
 
 # Instructions from scratch:
