@@ -3,10 +3,7 @@ Tools to help infers a caffe model
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
-import cv2
-import cv2.cv as cv
 
 # Make sure that caffe is on the python path:
 # sys.path.append('~/caffe/python') using the ~ does not work, for some reason???
@@ -30,6 +27,7 @@ def get_classifier(model_name, crop_size):
 
     net = caffe.Classifier(MODEL_FILE, PRETRAINED, image_dims=(crop_size, crop_size), mean=mean_arr, raw_scale=255)
     return net
+
 
 def get_labels(model_name):
     labels_file = model_name + '/labels.txt'

@@ -1,13 +1,14 @@
 import os
+import random
+import shutil
 import sys
 import time
-import glob
-import cv2
 from random import randint
-import random
+
+import cv2
+
 import caffe_image as ci
 import caffe_lmdb
-import shutil
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -24,15 +25,12 @@ import numpy as np
 if __name__ == '__main__':
     dirname = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(dirname, '..', '..'))
-    import digits.config
-
-from digits import utils
 
 # Import digits.config first to set the path to Caffe
-import caffe.io
 from caffe.proto import caffe_pb2
 
-def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = True, create_files = False):
+
+def create_lmdbs(filedata, lmdb_dir, images_per_angle, test_id, create_val_set=True, create_files=False):
     start_time = time.time()
 
     max_images = 99999999
@@ -70,27 +68,27 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
     id = -1
     crops = []
 
-    #for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
+    # for filename in glob.iglob('/home/pkrush/copper/test/*.jpg'):
     for image_id, filename, angle_offset in filedata:
         print image_id
-        #imageid = filename[-9:]
-        #imageid = imageid[:5]
+        # imageid = filename[-9:]
+        # imageid = imageid[:5]
         id += 1
         if id > max_images - 1:
             break
 
-        #crop = cv2.imread('/home/pkrush/copper/test.jpg')
+        # crop = cv2.imread('/home/pkrush/copper/test.jpg')
         crop = cv2.imread(filename)
         if crop is None:
             continue
 
-        #images are 256 x 256, Center is 128,128, crop 56x56 from center:
-        #crop = crop[100:156,100:156]
+        # images are 256 x 256, Center is 128,128, crop 56x56 from center:
+        # crop = crop[100:156,100:156]
 
-        #images are 256 x 256, Center is 128,128, crop 160x160 from center:
-        crop = crop[48:208,48:208]
+        # images are 256 x 256, Center is 128,128, crop 160x160 from center:
+        crop = crop[48:208, 48:208]
 
-        crop = cv2.resize(crop, (before_rotate_size,before_rotate_size), interpolation=cv2.INTER_AREA)
+        crop = cv2.resize(crop, (before_rotate_size, before_rotate_size), interpolation=cv2.INTER_AREA)
         crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
         crops.append(crop)
@@ -108,12 +106,12 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
 
     number_of_angles = images_per_angle * 360
     if not create_val_set:
-        #You have to more test images if this is the test set:
-        number_of_angles = number_of_angles * len(crops)
-    angles = ci.get_angle_sequence(number_of_angles,test_id)
+        # You have to more test images if this is the test set:
+        number_of_angles *= len(crops)
+    angles = ci.get_angle_sequence(number_of_angles, test_id)
 
-    for random_float,angle, class_angle in angles:
-        random_index = random.randint(0,len(crops)-1)
+    for random_float, angle, class_angle in angles:
+        random_index = random.randint(0, len(crops) - 1)
         crop = crops[random_index]
         image_id = filedata[random_index][0]
         angle_offset = filedata[random_index][2]
@@ -122,27 +120,27 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
         if angle_to_rotate > 360:
             angle_to_rotate - 360
 
-
         rot_image = ci.get_whole_rotated_image(crop, mask, angle_to_rotate, crop_size)
 
         if create_files:
-            cv2.imwrite(img_dir + '/' + str(class_angle + 1000) + '/' + str(id) + str(angle).zfill(5) + '.png',rot_image)
+            cv2.imwrite(img_dir + '/' + str(class_angle + 1000) + '/' + str(id) + str(angle).zfill(5) + '.png',
+                        rot_image)
 
         datum = caffe_pb2.Datum()
         datum.data = cv2.imencode('.png', rot_image)[1].tostring()
-        #datum.data = cv2.imencode('.png', rot_image).tostring()
+        # datum.data = cv2.imencode('.png', rot_image).tostring()
         datum.label = int(class_angle)
         datum.encoded = 1
 
         rot_image = rot_image.reshape(1, crop_size, crop_size)
         image_sum += rot_image
-        #datum = caffe.io.array_to_datum(rot_image, class_angle)
+        # datum = caffe.io.array_to_datum(rot_image, class_angle)
 
-        #key_string = '{:08}'.format((id * 100000) +  count)
-        #key = '{:08}'.format(angle)
-        #str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
-        #str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
-        #00000000_123 is the key digits makes, but I still! don't know if I can change that.
+        # key_string = '{:08}'.format((id * 100000) +  count)
+        # key = '{:08}'.format(angle)
+        # str_id = str(randint(0, 9999999)) + ',' + str(image_id) + ',' + str(class_angle)
+        # str_id = '{:03}'.format(image_id % 1000) + '{:05}'.format(key)
+        # 00000000_123 is the key digits makes, but I still! don't know if I can change that.
         str_id = '{:05}'.format(key) + ',' + '{:05}'.format(image_id) + ',' + str(class_angle)
 
         key += 1
@@ -155,18 +153,17 @@ def create_lmdbs(filedata, lmdb_dir, images_per_angle,test_id, create_val_set = 
                 phase = 'val'
 
         if phase == 'train':
-            #train_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
-            train_image_batch.append([str_id.encode('ascii'),datum])
+            # train_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
+            train_image_batch.append([str_id.encode('ascii'), datum])
 
         if phase == 'val':
-            #val_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
+            # val_image_batch.append([str(image_id) + "," + str(angle + 1000), datum])
             val_image_batch.append([str_id.encode('ascii'), datum])
 
     caffe_lmdb.write_batch_to_lmdb(train_image_db, train_image_batch)
     caffe_lmdb.write_batch_to_lmdb(val_image_db, val_image_batch)
     train_image_batch = []
     val_image_batch = []
-
 
     # label_batch = []
 

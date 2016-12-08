@@ -7,17 +7,17 @@ How could this test work better:
     I bet not doing seq writing to the lmdb and slowing down more.
 '''
 
-
+import glob
 import os
 import sys
 import time
-import glob
-import cv2
 from random import randint
 
-import infer
+import cv2
+
 import caffe_image
 import caffe_lmdb
+import infer
 
 sys.path.append('/home/pkrush/caffe/python')
 sys.path.append('/home/pkrush/digits')
@@ -34,13 +34,9 @@ import numpy as np
 if __name__ == '__main__':
     dirname = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(dirname, '..', '..'))
-    import digits.config
-
-from digits import utils
 
 # Import digits.config first to set the path to Caffe
 import caffe.io
-from caffe.proto import caffe_pb2
 
 
 def infer_two_crops():
@@ -66,6 +62,7 @@ def infer_two_crops():
 
     print total_max_value, total_hits
     return
+
 
 def create_lmdbs():
     max_images = 1
@@ -126,7 +123,7 @@ def create_lmdbs():
             top = randint(0, 359)
             bottom = top + clockwise_travel_diff_angle
             if bottom > 359:
-                bottom = bottom - 360
+                bottom -= 360
 
             combo = np.zeros((28, 28))
             combo[0:14, 0:28] = crops[top]
@@ -162,6 +159,7 @@ def create_lmdbs():
     caffe_image.save_mean(mean_image, os.path.join(lmdb_dir, 'mean.binaryproto'))
 
     return
+
 
 if __name__ == '__main__':
     start_time = time.time()

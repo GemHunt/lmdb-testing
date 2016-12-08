@@ -8,8 +8,8 @@ import pandas as pd
 import caffe_image as ci
 
 results_dict = {}
-Image = namedtuple('Image','seed_image_id image_id angle max_value')
-Group = namedtuple('Group','group_id starting_seed_id images')
+Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
+Group = namedtuple('Group', 'group_id starting_seed_id images')
 seed_groups = []
 widened_seeds = [3893, 5107, 6280, 9813, 4152]
 
@@ -38,7 +38,6 @@ def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images
             if remove_widened_seeds:
                 if seed_image_id in widened_seeds:
                     continue
-
 
             if image_id in image_ids_with_highest_max_value:
                 if image_ids_with_highest_max_value[image_id][2] < max_value:
@@ -70,7 +69,8 @@ def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images
 
     pickle.dump(results_dict, open(data_dir + 'seed_data.pickle', "wb"))
 
-def get_results_list(seed_id_filter = -1):
+
+def get_results_list(seed_id_filter=-1):
     results_list = []
     for seed_image_id, seed_values in results_dict.iteritems():
         if seed_id_filter == -1:
@@ -84,13 +84,14 @@ def get_results_list(seed_id_filter = -1):
             results_list.append(Image(seed_image_id, image_id, angle, max_value))
     return results_list
 
+
 def set_angles_postive():
     Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
     results_list = get_results_list()
     new_results_list = []
 
     for image in results_list:
-        #Flip the seeds and test image_ids on all 331-359 angles so all angles are 0-29.
+        # Flip the seeds and test image_ids on all 331-359 angles so all angles are 0-29.
         if image.angle < 30:
             new_results_list.append(image)
         else:
@@ -98,7 +99,7 @@ def set_angles_postive():
             image_id = image.seed_image_id
             angle = 360 - image.angle
             max_value = image.max_value
-            new_results_list.append(Image(seed_image_id,image_id,angle,max_value))
+            new_results_list.append(Image(seed_image_id, image_id, angle, max_value))
 
     results_list = new_results_list
     for image in results_list:
@@ -111,15 +112,17 @@ def set_angles_postive():
             existing_max_value = results_dict[image.seed_image_id][image.image_id][0]
             existing_angle = results_dict[image.seed_image_id][image.image_id][1]
             if abs(image.angle - existing_angle) > 2:
-                print 'Angles off by more than 3: ',image, existing_angle
+                print 'Angles off by more than 3: ', image, existing_angle
 
             if image.max_value > existing_max_value:
                 results_dict[image.seed_image_id][image.image_id] = [image.max_value, image.angle]
 
+
 def create_group():
-    #Set the first top-link for the starting seed will be the test image with the most points.
-    #Keep going until I get back to the starting seed.
+    # Set the first top-link for the starting seed will be the test image with the most points.
+    # Keep going until I get back to the starting seed.
     pass
+
 
 def set_starting_seed():
     results_left = results_dict.copy()
@@ -132,10 +135,10 @@ def set_starting_seed():
     test_id = grouped.idxmax()
     del results_left[starting_seed_id][test_id]
 
-
-    #The seed left with the most points(sum of max_value for all links) is the starting seed.
-    #Starting seed is 0 and 360.
+    # The seed left with the most points(sum of max_value for all links) is the starting seed.
+    # Starting seed is 0 and 360.
     pass
+
 
 def get_nodes():
     nodes = set(results_dict.keys())
@@ -144,6 +147,7 @@ def get_nodes():
             if not image_id in nodes:
                 nodes.add(image_id)
     return nodes
+
 
 def get_edges():
     # this is currently ignoring dup edges.
@@ -154,15 +158,15 @@ def get_edges():
             angle = values[1]
             node1 = seed_image_id
             node2 = image_id
-            edge_value = [max_value,angle]
+            edge_value = [max_value, angle]
 
-            #flip the node order so the first node image_id is always lower
+            # flip the node order so the first node image_id is always lower
             if node1 < node2:
                 temp = node1
                 node1 = node2
                 node2 = temp
-                edge_value = [max_value,-angle]
-            edge_key = (node1,node2)
+                edge_value = [max_value, -angle]
+            edge_key = (node1, node2)
             if not edge_key in edges.keys():
                 edges[edge_key] = edge_value
     return edges
@@ -218,7 +222,7 @@ def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, total_p
                 else:
                     max_value, angle = edges[(node2, node1)]
                     angle = -angle
-                #print node1, node2, max_value, angle
+                # print node1, node2, max_value, angle
                 angle_total += angle
                 max_value_edge_path_total += max_value
                 node1 = node
@@ -229,26 +233,22 @@ def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, total_p
                 test_image_id = node2
                 test_max_value = max_value
                 test_image_angle = angle_total
-                #print '                       ', path, angle_total, '\n'
+                # print '                       ', path, angle_total, '\n'
             else:
                 angles[tuple(path)] = angle_total
-                #print '    ', path, angle_total, '\n'
+                # print '    ', path, angle_total, '\n'
         good_paths_count = 0
         for saved_path, angle in angles.iteritems():
             if abs(test_image_angle - angle) < 3:
-                good_paths_count +=1
+                good_paths_count += 1
             else:
                 # print saved_path, angle, test_image_angle
                 bad_paths.append(saved_path)
 
-        max_value_ave = max_value_path_total/len(edge_paths)
+        max_value_ave = max_value_path_total / len(edge_paths)
         graph_results.append(
             [test_image_id, test_image_angle, total_path_angle + test_image_angle, test_max_value, max_value_ave,
              len(edge_paths) - 1, good_paths_count])
-
-
-        # for path in bad_paths:
-        # print path
 
     graph_results = sorted(graph_results, key=lambda graph_results: graph_results[3], reverse=True)
 
@@ -284,21 +284,21 @@ def create_composite_images(crop_dir, data_dir, crop_size, rows, cols, seed_imag
     for seed_image_id, seed_values in results.iteritems():
         images = []
         crop_size = 160
-        images.append(ci.get_rotated_crop(crop_dir,seed_image_id, crop_size, 0))
+        images.append(ci.get_rotated_crop(crop_dir, seed_image_id, crop_size, 0))
 
         results = []
         for image_id, values in seed_values.iteritems():
             max_value, angle = values
-            results.append([image_id, max_value,angle])
+            results.append([image_id, max_value, angle])
 
         sorted_results = sorted(results, key=lambda result: result[1], reverse=True)
-        for image_id, max_value,angle in sorted_results:
-            crop = ci.get_rotated_crop(crop_dir,image_id, crop_size, angle)
+        for image_id, max_value, angle in sorted_results:
+            crop = ci.get_rotated_crop(crop_dir, image_id, crop_size, angle)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(crop, str(max_value)[0:5], (10, 20), font, .7, (0, 255, 0), 2)
             cv2.putText(crop, str(image_id)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
             images.append(crop)
-        composite_image = ci.get_composite_image(images,rows,cols)
+        composite_image = ci.get_composite_image(images, rows, cols)
         cv2.imwrite(data_dir + str(seed_image_id) + '.png', composite_image)
 
 

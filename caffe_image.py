@@ -20,65 +20,72 @@ import PIL.Image
 
 if __name__ == '__main__':
     dirname = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, os.path.join(dirname,'..','..'))
+    sys.path.insert(0, os.path.join(dirname, '..', '..'))
 
 # Import digits.config first to set the path to Caffe
 from caffe.proto import caffe_pb2
 
-def get_whole_rotated_image(crop,mask,angle, crop_size):
+
+def get_whole_rotated_image(crop, mask, angle, crop_size):
     before_rotate_size = 56
-    center_x = before_rotate_size/2 + (random.random() * 2) - 1
-    center_y = before_rotate_size/2 + (random.random() * 2) - 1
+    center_x = before_rotate_size / 2 + (random.random() * 2) - 1
+    center_y = before_rotate_size / 2 + (random.random() * 2) - 1
 
     rot_image = crop.copy()
     rot_image = rotate(rot_image, angle, center_x, center_y, before_rotate_size, before_rotate_size)
-    rot_image = cv2.resize(rot_image, (41,41), interpolation=cv2.INTER_AREA)
+    rot_image = cv2.resize(rot_image, (41, 41), interpolation=cv2.INTER_AREA)
     rot_image = rot_image[6:34, 6:34]
 
-    #rot_image = rot_image * mask
+    # rot_image = rot_image * mask
     return rot_image
+
 
 def get_circle_mask(crop_size):
     mask = np.zeros((crop_size, crop_size), dtype=np.uint8)
-    cv2.circle(mask, (crop_size/2, crop_size/2), (crop_size/2), 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
+    cv2.circle(mask, (crop_size / 2, crop_size / 2), (crop_size / 2), 1, cv2.cv.CV_FILLED, lineType=8, shift=0)
     return mask
+
 
 def center_rotate(img, angle):
     rows, cols = img.shape
-    M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
-    cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
+    m = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
+    cv2.warpAffine(img, m, (cols, rows), img, cv2.INTER_CUBIC)
     return img
 
-def rotate(img, angle,center_x,center_y,rows,cols):
-    M = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
-    cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
+
+def rotate(img, angle, center_x, center_y, rows, cols):
+    m = cv2.getRotationMatrix2D((center_x, center_y), angle, 1)
+    cv2.warpAffine(img, m, (cols, rows), img, cv2.INTER_CUBIC)
     return img
 
 
 def get_rotated_crop(crop_dir, crop_id, crop_size, angle):
     crop = cv2.imread(crop_dir + str(crop_id) + '.jpg')
     crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
-    M = cv2.getRotationMatrix2D((crop_size / 2, crop_size / 2), angle, 1)
-    cv2.warpAffine(crop, M, (crop_size, crop_size), crop, cv2.INTER_CUBIC)
+    m = cv2.getRotationMatrix2D((crop_size / 2, crop_size / 2), angle, 1)
+    cv2.warpAffine(crop, m, (crop_size, crop_size), crop, cv2.INTER_CUBIC)
     return crop
 
-def rotate_point(angle, center_x,center_y,point_x,point_y):
+
+def rotate_point(angle, center_x, center_y, point_x, point_y):
     rotated_x = ((point_x - center_x) * math.cos(angle)) - ((point_y - center_y) * math.sin(angle)) + center_x
     rotated_y = ((point_x - center_x) * math.sin(angle)) + ((point_y - center_y) * math.cos(angle)) + center_y
-    return rotated_x,rotated_y
+    return rotated_x, rotated_y
 
-def rotate_matrix(angle, center_x,center_y,mat):
+
+def rotate_matrix(angle, center_x, center_y, mat):
     rotated = mat.copy()
-    #OMG I need to learny my matrix math in Python!
-    for num in range(0,4):
-        rotated_x,rotated_y = rotate_point(math.radians(angle),center_x,center_y,mat[num,0],mat[num,1])
-        rotated[num,0] = rotated_x
+    # OMG I need to learny my matrix math in Python!
+    for num in range(0, 4):
+        rotated_x, rotated_y = rotate_point(math.radians(angle), center_x, center_y, mat[num, 0], mat[num, 1])
+        rotated[num, 0] = rotated_x
         rotated[num, 1] = rotated_y
     return rotated
 
+
 def get_angled_crops(crop, crop_size):
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-    crop = cv2.resize(crop, (crop_size , crop_size), interpolation=cv2.INTER_AREA)
+    crop = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
 
     crops = [None] * 360
 
@@ -95,13 +102,15 @@ def get_angled_crops(crop, crop_size):
 
     return crops
 
+
 def save_image(image, filename):
     # converting from BGR to RGB
-    image = image[[2,1,0],...] # channel swap
-    #convert to (height, width, channels)
-    image = image.astype('uint8').transpose((1,2,0))
+    image = image[[2, 1, 0], ...]  # channel swap
+    # convert to (height, width, channels)
+    image = image.astype('uint8').transpose((1, 2, 0))
     image = PIL.Image.fromarray(image)
     image.save(filename)
+
 
 def save_mean(mean, filename):
     """
@@ -126,6 +135,7 @@ def save_mean(mean, filename):
     else:
         raise ValueError('unrecognized file extension')
 
+
 def get_caffe_image(crop, crop_size):
     # this is how you get the image from file:
     # coinImage = [caffe.io.load_image("some file", color=False)]
@@ -137,11 +147,12 @@ def get_caffe_image(crop, crop_size):
     caffe_images = [caffe_image]
     return caffe_images
 
-def get_angle_sequence(length,test_id):
+
+def get_angle_sequence(length, test_id):
     random.seed(test_id)
     angles = []
     for count in range(0, length):
-        angle = float(count) / (length/360)
+        angle = float(count) / (length / 360)
         class_angle = int(round(angle))
         if class_angle == 360:
             class_angle = 0
@@ -189,27 +200,25 @@ def get_angle_sequence(length,test_id):
     return angles
 
 
-def get_composite_image(images,cols,rows):
+def get_composite_image(images, cols, rows):
     crop_rows, crop_cols, channels = images[0].shape
     composite_rows = crop_rows * rows
     composite_cols = crop_cols * cols
-    composite_image = np.zeros((composite_rows,composite_cols,3), np.uint8)
+    composite_image = np.zeros((composite_rows, composite_cols, 3), np.uint8)
     key = 0
-    for x in range(0,rows):
+    for x in range(0, rows):
         for y in range(0, cols):
             if len(images) <= key:
                 break
-            composite_image[x*crop_rows:((x+1)*crop_rows), y*crop_cols:((y+1)*crop_cols)] = images[key]
+            composite_image[x * crop_rows:((x + 1) * crop_rows), y * crop_cols:((y + 1) * crop_cols)] = images[key]
             key += 1
     return composite_image
 
 
 def get_formated_angle(angle):
-    angle = angle % 360
+    angle %= 360
     if angle < -179:
-        angle = angle + 360
+        angle += 360
     if angle > 180:
-        angle = angle - 360
+        angle -= 360
     return angle
-
-
