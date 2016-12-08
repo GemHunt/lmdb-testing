@@ -20,6 +20,7 @@ crop_dir = home_dir + 'crops/'
 train_dir = home_dir + 'train/'
 test_dir = home_dir + 'test/'
 test_angles = {0: (30, 330), 1: (60, 300), 2: (90, 270), 3: (120, 240), 4: (150, 210), 5: (180, 180)}
+wide_image_ids = {11458, 12004}
 
 
 def init_dir():
@@ -45,7 +46,7 @@ def get_seed_image_ids():
 
     #test_image_ids = pickle.load(open(data_dir + 'test_image_ids.pickle', "rb"))
     #seed_image_ids = seed_image_ids + test_image_ids[0:180]
-    #seed_image_ids = seed_image_ids + get_wide_image_ids()
+    # seed_image_ids = seed_image_ids + wide_image_ids()
     #pickle.dump(seed_image_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
 
 def get_test_image_ids():
@@ -53,12 +54,9 @@ def get_test_image_ids():
     return sorted(set(test_image_ids))
 
     #test_image_ids += get_seed_image_ids()
-    #test_image_ids += get_wide_image_ids()
+    # test_image_ids += wide_image_ids()
     #test_image_ids = list(set(test_image_ids))
     #pickle.dump(test_image_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
-
-def get_wide_image_ids():
-    return set([11458,12004])
 
 def rename_crops():
     crops = []
@@ -290,24 +288,26 @@ def read_all_results(cut_off=0, seed_image_ids=None, seeds_share_test_images=Tru
     # image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
 
 
-read_all_results(10, seeds_share_test_images=True, remove_widened_seeds=True)
-save_graph()
-# read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
-seed_image_id = 45
-most_connected_seeds = image_set.find_most_connected_seeds(data_dir, seed_image_id)
-if len(most_connected_seeds) != 0:
-    image_set.create_composite_image(crop_dir, data_dir, 130, 10, 30, most_connected_seeds.iterkeys())
-    for seed_image_id, values in most_connected_seeds.iteritems():
-        print values
-print 'Count:', len(most_connected_seeds)
+def link_seed_by_graph(seed_image_id, min_connections, max_depth):
+    read_all_results(10, seeds_share_test_images=True, remove_widened_seeds=True)
+    save_graph()
+    # read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
+    seed_image_id = 7132
+    most_connected_seeds = image_set.find_most_connected_seeds(data_dir, seed_image_id, min_connections, max_depth)
+    if len(most_connected_seeds) != 0:
+        image_set.create_composite_image(crop_dir, data_dir, 130, 10, 30, most_connected_seeds.iterkeys())
+        for seed_image_id, values in most_connected_seeds.iteritems():
+            print values
+    print 'Count:', len(most_connected_seeds)
 
 
+link_seed_by_graph(7132, 10, 18)
 
 
 
 #Instructions from scratch:
 #create_new_seed_index()
-#seeds = get_seed_image_ids()-get_wide_image_ids()
+#seeds = get_seed_image_ids()- wide_image_ids()
 #create_single_lmdbs(seeds)
 #create_test_lmdbs(0)
 #run_script(train_dir + 'train_all.sh')

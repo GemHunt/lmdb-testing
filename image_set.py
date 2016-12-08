@@ -168,7 +168,7 @@ def get_edges():
     return edges
 
 
-def find_most_connected_seeds(data_dir, seed_image_id):
+def find_most_connected_seeds(data_dir, seed_image_id, min_connections, max_depth):
     most_connected_seeds = {}
     nodes = pickle.load(open(data_dir + 'nodes.pickle', "rb"))
     edges = pickle.load(open(data_dir + 'edges.pickle', "rb"))
@@ -176,10 +176,12 @@ def find_most_connected_seeds(data_dir, seed_image_id):
     G = nx.Graph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
-    return get_most_connected_seeds(G, edges, seed_image_id, most_connected_seeds, 0)
+    return get_most_connected_seeds(G, edges, seed_image_id, most_connected_seeds, 0, 0, min_connections, max_depth)
 
 
-def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, level):
+# Warning: This function is recursive as it follows the graph:
+def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, total_path_angle, level, min_connections,
+                             max_depth):
     if not start_node in results_dict.iterkeys():
         return most_connected_seeds
 
@@ -241,28 +243,34 @@ def get_most_connected_seeds(G, edges, start_node, most_connected_seeds, level):
 
         max_value_ave = max_value_path_total/len(edge_paths)
         graph_results.append(
-            [test_image_id, test_image_angle, test_max_value, max_value_ave, len(edge_paths) - 1, good_paths_count])
+            [test_image_id, test_image_angle, total_path_angle + test_image_angle, test_max_value, max_value_ave,
+             len(edge_paths) - 1, good_paths_count])
 
 
         # for path in bad_paths:
         # print path
 
-    graph_results = sorted(graph_results, key=lambda graph_results: graph_results[2], reverse=True)
+    graph_results = sorted(graph_results, key=lambda graph_results: graph_results[3], reverse=True)
 
     for result in graph_results:
         seed_image_id = result[0]
         if seed_image_id not in widened_seeds:
             if seed_image_id not in most_connected_seeds:
                 if seed_image_id != start_node:
-                    if result[5] > 10:
-                        most_connected_seeds[seed_image_id] = result
-                        if level < 18:
-                            most_connected_seeds = get_most_connected_seeds(G, edges, seed_image_id,
-                                                                            most_connected_seeds, level + 1)
-                            print level
-
-    # print 'test_image_id, test_image_angle, test_max_value, max_value_ave, edge_path_count, good_paths_count'
-    # print graph_results
+                    new_total_path_angle = total_path_angle + result[1]
+                    # You want the path mostly growing away from the first seed.
+                    # So this puts a natural limit on depth
+                    if (abs(new_total_path_angle) - abs(total_path_angle)) >= 0:
+                        if abs(total_path_angle + result[1]) <= 180:  # Only follow nodes to +180 or -180
+                            if result[6] > min_connections:
+                                most_connected_seeds[seed_image_id] = result
+                                if level < max_depth:
+                                    most_connected_seeds = get_most_connected_seeds(G, edges, seed_image_id,
+                                                                                    most_connected_seeds,
+                                                                                    total_path_angle + result[1],
+                                                                                    level + 1, min_connections,
+                                                                                    max_depth)
+                                    print level
 
     return most_connected_seeds
 
