@@ -97,19 +97,25 @@ def create_single_lmdbs(seed_image_ids):
     create_script_calling_script(train_dir + 'train_all.sh', shell_filenames)
 
 
-def copy_train_files(lmdb_dir):
-    copy_file('solver.prototxt', lmdb_dir)
+def copy_train_files(lmdb_dir,multi_image_training = False):
+    if multi_image_training:
+        copy_file('solver-multi.prototxt', lmdb_dir)
+    else:
+        copy_file('solver.prototxt', lmdb_dir)
     copy_file('train_val.prototxt', lmdb_dir)
     copy_file('deploy.prototxt', lmdb_dir)
     copy_file('labels.txt', lmdb_dir)
 
 
-def create_train_script(lmdb_dir, weight_filename):
+def create_train_script(lmdb_dir, weight_filename,multi_image_training):
     log_filename = 'caffe_output.log'
     shell_script = 'cd ' + lmdb_dir + '\n'
     shell_script += '/home/pkrush/caffe/build/tools/caffe '
     shell_script += 'train '
-    shell_script += '-solver ' + lmdb_dir + 'solver.prototxt '
+    if multi_image_training:
+        shell_script += '-solver ' + lmdb_dir + 'solver-multi.prototxt '
+    else:
+        shell_script += '-solver ' + lmdb_dir + 'solver.prototxt '
     shell_script += '-weights ' + weight_filename + ' '
     shell_script += '2> ' + lmdb_dir + log_filename + ' \n'
     shell_script += 'grep accu ' + log_filename + ' \n'
@@ -142,7 +148,7 @@ def get_single_lmdb_filedata(seed_id, max_value_cutoff):
             filedata.append([image_id, crop_dir + str(image_id) + '.jpg', angle])
     return filedata
 
-def create_single_lmdb(seed_image_id, filedata, test_id=0):
+def create_single_lmdb(seed_image_id, filedata, test_id=0,multi_image_training = False ):
     start_time = time.time()
     print 'create_single_lmdb for ' + str(seed_image_id)
 
@@ -154,8 +160,8 @@ def create_single_lmdb(seed_image_id, filedata, test_id=0):
 
     #create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, int(100 + (0.5 * test_id)), -1, True, False)
     create_lmdb_rotate_whole_image.create_lmdbs(filedata, lmdb_dir, int(200 + (2 * test_id)), -1, True, False)
-    copy_train_files(lmdb_dir)
-    create_train_script(lmdb_dir, weight_filename_copy)
+    copy_train_files(lmdb_dir,multi_image_training)
+    create_train_script(lmdb_dir, weight_filename_copy,multi_image_training)
     print 'Done in %s seconds' % (time.time() - start_time,)
 
 
@@ -173,18 +179,24 @@ def create_test_lmdbs(test_id):
     seed_image_ids = get_seed_image_ids()
 
     for image_id in seed_image_ids:
-        shell_script = 'cd ' + train_dir + str(image_id) + '/\n'
-        shell_script += '/home/pkrush/caffe/.build_release/examples/cpp_classification/classification.bin '
-        shell_script += 'deploy.prototxt '
-        shell_script += 'snapshot_iter_844.caffemodel '
-        shell_script += 'mean.binaryproto '
-        shell_script += 'labels.txt '
-        shell_script += test_dir + str(test_id) + '/train_db/data.mdb '
-        shell_script += '> ' + test_dir + str(test_id) + '/' + str(image_id) + '.dat\n'
-        shell_filename = test_dir + str(test_id) + '/test-' + str(image_id) + '.sh'
-        create_shell_script(shell_filename, shell_script)
-        shell_filenames.append(shell_filename)
+        shell_filenames.append( create_test_script(image_id,test_id))
     create_script_calling_script(test_dir + 'test_all.sh', shell_filenames)
+
+def create_test_script(image_id,test_id,multi_image_training = False ):
+    shell_script = 'cd ' + train_dir + str(image_id) + '/\n'
+    shell_script += '/home/pkrush/caffe/.build_release/examples/cpp_classification/classification.bin '
+    shell_script += 'deploy.prototxt '
+    if multi_image_training:
+        shell_script += 'snapshot_iter_8440.caffemodel '
+    else:
+        shell_script += 'snapshot_iter_844.caffemodel '
+    shell_script += 'mean.binaryproto '
+    shell_script += 'labels.txt '
+    shell_script += test_dir + str(test_id) + '/train_db/data.mdb '
+    shell_script += '> ' + test_dir + str(test_id) + '/' + str(image_id) + '.dat\n'
+    shell_filename = test_dir + str(test_id) + '/test-' + str(image_id) + '.sh'
+    create_shell_script(shell_filename, shell_script)
+    return  shell_filename
 
 
 def create_shell_script(filename, shell_script):
@@ -193,7 +205,6 @@ def create_shell_script(filename, shell_script):
 
     with open(filename, 'w') as file_:
         file_.write(shell_script)
-
     fd = os.open(filename, os.O_RDONLY)
     os.fchmod(fd, 0755)
     os.close(fd)
@@ -245,8 +256,10 @@ def widen_model(seed_image_id, max_test_id, max_value_cutoff):
     image_set.create_composite_images(crop_dir, data_dir, 120, 8, 20)
 
 
-def run_train_test(seed_image_id, filedata,max_value_cutoff, test_id):
-    create_single_lmdb(seed_image_id, filedata, test_id)
+def run_train_test(seed_image_id, filedata,max_value_cutoff, test_id, multi_image_training = False):
+    create_single_lmdb(seed_image_id, filedata, test_id, multi_image_training)
+    for test_id in range(0, test_id + 1):
+        create_test_script(seed_image_id, test_id, multi_image_training)
     run_script(train_dir + str(seed_image_id) + '/train-single-coin-lmdbs.sh')
     run_script(test_dir + str(test_id) + '/test-' + str(seed_image_id) + '.sh')
     read_test([seed_image_id], test_id)
@@ -313,13 +326,13 @@ def save_graph():
 
 def read_all_results(cut_off=0, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
     image_set.read_results(cut_off, data_dir, seed_image_ids, seeds_share_test_images, remove_widened_seeds)
-    image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
+    #image_set.create_composite_images(crop_dir, data_dir, 140,10,10)
 
 
 def link_seed_by_graph(seed_image_id, min_connections, max_depth):
     filedata = []
     read_all_results(10, seeds_share_test_images=True, remove_widened_seeds=True)
-    save_graph()
+    #save_graph()
     # read_all_results(5,[4866],seeds_share_test_images=False,remove_widened_seeds=True)
     most_connected_seeds = image_set.find_most_connected_seeds(data_dir, seed_image_id, min_connections, max_depth)
     if len(most_connected_seeds) != 0:
@@ -331,22 +344,23 @@ def link_seed_by_graph(seed_image_id, min_connections, max_depth):
     return filedata
 
 
-
 #read_all_results(10, seeds_share_test_images=False, remove_widened_seeds=True)
 
 # Good ones to link: 4866,8924,7855
 seed_image_id = 8058
 filedata = link_seed_by_graph(seed_image_id,min_connections=10, max_depth=18)
 image_set.create_composite_image_from_filedata(crop_dir, data_dir, 140, rows=10, cols=20, filedata=filedata)
+
 if len(filedata) > 5:
     max_value_cutoff = 10
-    #run_train_test(seed_image_id, filedata, max_value_cutoff, test_id=5)
+    run_train_test(seed_image_id, filedata, max_value_cutoff, test_id=5,multi_image_training =  True)
     run_test(seed_image_id, max_value_cutoff, test_id=5)
     read_all_results(15)
     image_set.create_composite_images(crop_dir, data_dir,crop_size = 140,rows=10,cols=50)
 else:
     print 'Not enough seeds found'
-'''
+
+
 
 
 
