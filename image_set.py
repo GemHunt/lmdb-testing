@@ -11,7 +11,7 @@ results_dict = {}
 Image = namedtuple('Image', 'seed_image_id image_id angle max_value')
 Group = namedtuple('Group', 'group_id starting_seed_id images')
 seed_groups = []
-widened_seeds = [3893, 5107, 6280, 9813, 4152,8924,7855]
+widened_seeds = [3893, 5107, 6280, 9813, 4152,8924]
 
 
 def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images=True, remove_widened_seeds=False):
@@ -19,6 +19,11 @@ def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images
     # columns = ['seed_image_id', 'image_id', 'angle', 'max_value']
     image_ids_with_highest_max_value = {}
     results_dict.clear()
+
+    if remove_widened_seeds:
+        wide1 = pickle.load(open(data_dir + '8058.pickle', "rb"))
+        wide2 = pickle.load(open(data_dir + '7855.pickle', "rb"))
+        seeds_to_remove = widened_seeds + wide1 + wide2
 
     # This fills image_ids_with_highest_max_value:
     for results in all_results:
@@ -36,7 +41,7 @@ def read_results(cut_off, data_dir, seed_image_ids=None, seeds_share_test_images
 
             # This optionally filters out widened seeds
             if remove_widened_seeds:
-                if seed_image_id in widened_seeds:
+                if seed_image_id in seeds_to_remove:
                     continue
 
             if image_id in image_ids_with_highest_max_value:
@@ -318,4 +323,15 @@ def create_composite_image_from_filedata(crop_dir, data_dir, crop_size, rows, co
         images.append(crop)
     composite_image = ci.get_composite_image(images, rows, cols)
     cv2.imwrite(data_dir + 'composite_image.png', composite_image)
+
+def save_widened_seeds(data_dir, seed_image_id,cut_off):
+    widened_seeds = []
+    values = results_dict[seed_image_id].iteritems()
+    for test_image_id, test_values in values:
+        max_value, angle = test_values
+        if max_value > cut_off:
+            widened_seeds.append(test_image_id)
+    print 'test_images_saved: ' , len(widened_seeds)
+
+    pickle.dump(widened_seeds, open(data_dir + str(seed_image_id) + '.pickle', "wb"))
 
